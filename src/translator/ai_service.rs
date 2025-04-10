@@ -159,6 +159,20 @@ fn get_translation_prompt(text: &str) -> String {
     )
 }
 
+fn extract_translation(response: &str) -> String {
+    // 查找最后一个 "English translation:" 后的内容
+    if let Some(idx) = response.rfind("English translation:") {
+        let translation = response[idx..].lines()
+            .skip(1)  // 跳过 "English translation:" 行
+            .map(|line| line.trim())
+            .filter(|line| !line.is_empty())
+            .collect::<Vec<_>>()
+            .join("\n");
+        return translation.trim().to_string();
+    }
+    response.trim().to_string()
+}
+
 #[async_trait]
 impl Translator for DeepSeekTranslator {
     async fn translate(&self, text: &str) -> anyhow::Result<String> {
@@ -201,10 +215,10 @@ impl Translator for DeepSeekTranslator {
         let result = response.json::<serde_json::Value>().await?;
         debug!("响应内容: {}", serde_json::to_string_pretty(&result)?);
 
-        Ok(result["choices"][0]["message"]["content"]
+        let translation = result["choices"][0]["message"]["content"]
             .as_str()
-            .unwrap_or_default()
-            .to_string())
+            .unwrap_or_default();
+        Ok(extract_translation(translation))
     }
 }
 
@@ -250,10 +264,10 @@ impl Translator for OpenAITranslator {
         let result = response.json::<serde_json::Value>().await?;
         debug!("响应内容: {}", serde_json::to_string_pretty(&result)?);
 
-        Ok(result["choices"][0]["message"]["content"]
+        let translation = result["choices"][0]["message"]["content"]
             .as_str()
-            .unwrap_or_default()
-            .to_string())
+            .unwrap_or_default();
+        Ok(extract_translation(translation))
     }
 }
 
@@ -300,10 +314,10 @@ impl Translator for ClaudeTranslator {
         let result = response.json::<serde_json::Value>().await?;
         debug!("响应内容: {}", serde_json::to_string_pretty(&result)?);
 
-        Ok(result["content"][0]["text"]
+        let translation = result["content"][0]["text"]
             .as_str()
-            .unwrap_or_default()
-            .to_string())
+            .unwrap_or_default();
+        Ok(extract_translation(translation))
     }
 }
 
@@ -349,10 +363,10 @@ impl Translator for CopilotTranslator {
         let result = response.json::<serde_json::Value>().await?;
         debug!("响应内容: {}", serde_json::to_string_pretty(&result)?);
 
-        Ok(result["choices"][0]["message"]["content"]
+        let translation = result["choices"][0]["message"]["content"]
             .as_str()
-            .unwrap_or_default()
-            .to_string())
+            .unwrap_or_default();
+        Ok(extract_translation(translation))
     }
 }
 
@@ -392,10 +406,10 @@ impl Translator for GeminiTranslator {
         let result = response.json::<serde_json::Value>().await?;
         debug!("响应内容: {}", serde_json::to_string_pretty(&result)?);
 
-        Ok(result["candidates"][0]["content"]["parts"][0]["text"]
+        let translation = result["candidates"][0]["content"]["parts"][0]["text"]
             .as_str()
-            .unwrap_or_default()
-            .to_string())
+            .unwrap_or_default();
+        Ok(extract_translation(translation))
     }
 }
 
@@ -441,10 +455,10 @@ impl Translator for GrokTranslator {
         let result = response.json::<serde_json::Value>().await?;
         debug!("响应内容: {}", serde_json::to_string_pretty(&result)?);
 
-        Ok(result["choices"][0]["message"]["content"]
+        let translation = result["choices"][0]["message"]["content"]
             .as_str()
-            .unwrap_or_default()
-            .to_string())
+            .unwrap_or_default();
+        Ok(extract_translation(translation))
     }
 }
 
