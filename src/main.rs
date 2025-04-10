@@ -115,6 +115,9 @@ async fn main() -> Result<()> {
                 if let Some(endpoint) = &service.api_endpoint {
                     println!("   API Endpoint: {}", endpoint);
                 }
+                if let Some(model) = &service.model {
+                    println!("   Model: {}", model);
+                }
             }
             Ok(())
         }
