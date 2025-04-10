@@ -1,0 +1,12 @@
+Source: git-commit-helper
+Section: devel
+Priority: optional
+Maintainer: zccrs <zccrs@live.com>
+Build-Depends: debhelper (>= 11), cargo, rustc
+Standards-Version: 4.5.0
+
+Package: git-commit-helper
+Architecture: any
+Depends: ${shlibs:Depends}, ${misc:Depends}, git
+Description: 帮助规范 git commit message 的工具
+ 一个帮助规范 git commit message 的命令行工具。

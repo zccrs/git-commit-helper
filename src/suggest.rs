@@ -2,7 +2,7 @@ use crate::config;
 use crate::git;
 use crate::translator::ai_service;
 use anyhow::Result;
-use dialoguer::{Input, Confirm};
+use dialoguer::{Confirm};
 use log::{debug, info};
 use std::process::Command;
 

@@ -26,3 +26,22 @@ echo "  bash: source ~/.bashrc"
 echo "  zsh:  source ~/.zshrc"
 
 echo "安装完成！"
+
+# 添加打包功能
+if [ "$1" = "package" ]; then
+    case "$2" in
+        "arch")
+            makepkg -sf
+            ;;
+        "deb")
+            dpkg-buildpackage -us -uc
+            ;;
+        "rpm")
+            rpmbuild -ba git-commit-helper.spec
+            ;;
+        *)
+            echo "用法: $0 package [arch|deb|rpm]"
+            exit 1
+            ;;
+    esac
+fi

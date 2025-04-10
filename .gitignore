@@ -9,3 +9,27 @@ Cargo.lock
 # Shell completion files
 .zcompdump
 .zcompcache/
+
+# Arch Linux packaging
+/pkg/
+/src/
+/*.pkg.tar.zst
+/*.tar.gz
+/cargo-home/
+
+# Debian packaging
+/debian/.debhelper/
+/debian/debhelper-build-stamp
+/debian/*.substvars
+/debian/*.log
+/debian/files
+/debian/git-commit-helper/
+/debian/*.debhelper
+/*.deb
+/*.buildinfo
+/*.changes
+
+# RPM packaging
+/rpmbuild/
+/*.rpm
+/*.spec.rpkg
