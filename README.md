@@ -1,148 +1,195 @@
-# git-commit-helper
+<h1 align="center">Git Commit Helper</h1>
 
-一个帮助生成和翻译 Git 提交信息的命令行工具，支持多个 AI 服务，可以进行中英互译。
+<p align="center">
+  一个强大的 Git 提交消息助手，支持多个 AI 服务，实现智能提交消息生成和中英互译
+</p>
 
-## 功能特点
+<p align="center">
+  <a href="LICENSE">
+    <img src="https://img.shields.io/badge/license-MIT-blue.svg" alt="license"/>
+  </a>
+  <a href="https://github.com/rust-lang/rust">
+    <img src="https://img.shields.io/badge/rust-stable-orange.svg" alt="rust"/>
+  </a>
+</p>
 
-- 支持多个 AI 服务：DeepSeek、OpenAI、Claude、Github Copilot、Gemini、Grok
-- 支持自定义 API 地址和模型
-- 支持中英双语提交信息
-- 支持自动检测中文内容并询问是否翻译
-- 支持根据暂存区内容自动生成提交信息
+## ✨ 功能特点
 
-## 安装
+- 🤖 多 AI 服务支持
+  - DeepSeek
+  - OpenAI/GPT
+  - Claude
+  - Github Copilot
+  - Google Gemini
+  - Grok
+- 🔧 高度可定制
+  - 支持自定义 API 地址
+  - 支持自定义 AI 模型
+  - 支持服务优先级配置
+- 📝 智能提交
+  - 自动生成规范的提交信息
+  - 支持指定提交类型
+  - AI 分析代码变更内容
+- 🌏 中英双语
+  - 自动检测中文内容
+  - 智能中英互译
+  - 保持格式规范
+
+## 📦 安装
+
+### 从源码安装
 
 ```bash
 # 克隆仓库
 git clone https://github.com/zccrs/git-commit-helper
 cd git-commit-helper
 
-# 使用安装脚本（推荐）
+# 快速安装（推荐）
 ./install.sh
-
-# 或手动安装
-cargo build --release
-./target/release/git-commit-helper install
-./target/release/git-commit-helper config
 ```
 
-## 使用方法
-
-### 基础命令
+### 包管理器安装
 
 ```bash
-# 配置 AI 服务
+# Arch Linux
+yay -S git-commit-helper
+
+# Debian/Ubuntu
+sudo apt install git-commit-helper
+
+# Fedora
+sudo dnf install git-commit-helper
+```
+
+## 🚀 快速开始
+
+1. 配置 AI 服务
+```bash
 git-commit-helper config
+```
 
-# 显示当前配置
-git-commit-helper show
-
-# 安装 Git Hook
+2. 安装 Git Hook
+```bash
 git-commit-helper install
-
-# 测试翻译功能
-git-commit-helper test -t "这是一个测试消息"
-
-# 翻译指定文本
-git-commit-helper translate -t "要翻译的文本"
-
-# 翻译指定文件内容
-git-commit-helper translate -f path/to/file
-
-# 生成提交信息建议（新增）
-git-commit-helper suggest              # 自动推断提交类型
-git-commit-helper suggest -t feat      # 指定提交类型为 feat
 ```
 
-### AI 服务管理
+3. 开始使用
+```bash
+# 智能生成提交信息
+git add .
+git-commit-helper suggest
+
+# 或者手动编写并自动翻译
+git commit
+```
+
+## 💡 使用指南
+
+### 翻译示例
+
+以下是一个实际的提交消息翻译示例：
+
+<details>
+<summary>展开查看示例</summary>
+
+原始提交消息：
+```text
+支持将原中文内容自动换行处理
+
+如原中文内容是："我是中文commit信息"，在翻译处理后，
+可能会变成：
+"我是中文\ncommit信息"，这取决于一行的长度
+否超出git的推荐值。
+```
+
+翻译后的提交消息：
+```text
+Support automatic line breaking for the original Chinese content
+
+If the original Chinese content is: "我是中文commit信息", after
+translation,
+it may become:
+"我是中文\ncommit信息", depending on whether the length of
+a line exceeds the recommended value of git.
+
+支持将原中文内容自动换行处理
+
+如原中文内容是："我是中文commit信息"，在翻译处理后，
+可能会变成：
+"我是中文\ncommit信息"，这取决于一行的长度
+否超出git的推荐值。
+```
+</details>
+
+### 命令概览
+
+| 命令 | 说明 | 示例 |
+|------|------|------|
+| config | 配置 AI 服务 | `git-commit-helper config` |
+| show | 显示当前配置 | `git-commit-helper show` |
+| install | 安装 Git Hook | `git-commit-helper install [-f]` |
+| test | 测试翻译功能 | `git-commit-helper test -t "测试文本"` |
+| suggest | 生成提交建议 | `git-commit-helper suggest [-t feat]` |
+| service | 管理 AI 服务 | `git-commit-helper service add` |
+
+### 提交类型
+
+| 类型 | 说明 | 使用场景 |
+|------|------|----------|
+| feat | 新功能 | 添加新特性 |
+| fix | 修复问题 | 修复 bug |
+| docs | 文档更新 | 更新文档 |
+| style | 格式调整 | 不影响代码逻辑的格式修改 |
+| refactor | 代码重构 | 不修复问题也不添加特性的代码更改 |
+| test | 测试相关 | 添加或修改测试用例 |
+| chore | 其他更新 | 构建过程或辅助工具的变更 |
+
+## 📂 项目打包
 
 ```bash
-# 列出所有已配置的服务
-git-commit-helper list
+# 打包脚本使用方法
+./install.sh package [arch|deb|rpm]
 
-# 服务管理
-git-commit-helper service add         # 添加新服务
-git-commit-helper service edit        # 修改服务配置
-git-commit-helper service remove      # 删除服务
-git-commit-helper service set-default # 设置默认服务
+# 手动打包
+makepkg -sf          # Arch Linux
+dpkg-buildpackage    # Debian
+rpmbuild -ba *.spec  # RPM
 ```
 
-## 提交类型说明
+## ⚙️ 配置文件
 
-使用 suggest 命令时，可以通过 -t 选项指定以下类型：
+默认配置路径：
+- 🐧 Linux: `~/.config/git-commit-helper/config.json`
+- 🍎 macOS: `~/Library/Application Support/git-commit-helper/config.json`
+- 🪟 Windows: `%APPDATA%\git-commit-helper\config.json`
 
-- feat: 新功能
-- fix: 修复问题
-- docs: 文档变更
-- style: 代码格式调整
-- refactor: 代码重构
-- test: 测试相关
-- chore: 构建或辅助工具变更
+## 🔍 调试日志
 
-## 配置说明
-
-配置文件默认保存在：
-- Linux: `~/.config/git-commit-helper/config.json`
-- macOS: `~/Library/Application Support/git-commit-helper/config.json`
-- Windows: `%APPDATA%\git-commit-helper\config.json`
-
-也可以在配置过程中选择自定义路径。
-
-## 工作流程
-
-1. 常规提交流程：
-   - 编写提交信息时，如果包含中文内容，工具会自动询问是否需要翻译
-   - 确认后会自动翻译并保持中英双语格式
-
-2. AI 辅助提交流程（新增）：
-   - 使用 git add 添加需要提交的文件
-   - 运行 `git-commit-helper suggest` 生成提交建议
-   - 预览生成的提交信息
-   - 选择是否需要中英双语格式
-   - 确认后自动提交
-
-## 打包说明
-
-本项目支持打包为以下格式：
-
-### Arch Linux 包
+通过设置环境变量 `RUST_LOG` 可以开启调试日志：
 
 ```bash
-# 使用 PKGBUILD 构建
-./install.sh package arch
-# 或直接使用
-makepkg -sf
+# 开启全部调试日志
+export RUST_LOG=debug
+git-commit-helper ...
+
+# 或者在运行时临时开启
+RUST_LOG=debug git-commit-helper ...
+
+# 仅开启特定模块的调试日志
+RUST_LOG=git_commit_helper=debug git-commit-helper ...
 ```
 
-### Debian 包
+常用日志级别：
+- error: 仅显示错误
+- warn: 显示警告和错误
+- info: 显示基本信息（默认）
+- debug: 显示调试信息
+- trace: 显示所有信息
 
-```bash
-# 使用脚本构建
-./install.sh package deb
-# 或直接使用
-dpkg-buildpackage -us -uc
-```
+## 🤝 贡献
 
-### RPM 包
+欢迎提交 [Issue](../../issues) 和 [Pull Request](../../pulls)！
 
-```bash
-# 使用脚本构建
-./install.sh package rpm
-# 或直接使用
-rpmbuild -ba git-commit-helper.spec
-```
+## 📄 许可证
 
-### 依赖说明
-
-打包工具依赖：
-- Arch Linux: `pacman -S base-devel`
-- Debian/Ubuntu: `apt install build-essential devscripts debhelper`
-- Fedora/RHEL: `dnf install rpm-build rpmdevtools`
-
-## 贡献
-
-欢迎提交 Issue 和 Pull Request！
-
-## 许可证
-
-[MIT](LICENSE)
+本项目采用 [MIT](LICENSE) 许可证。
