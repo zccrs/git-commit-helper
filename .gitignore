@@ -5,3 +5,7 @@ Cargo.lock
 .idea/
 .vscode/
 *.swp
+
+# Shell completion files
+.zcompdump
+.zcompcache/
