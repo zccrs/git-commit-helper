@@ -56,13 +56,10 @@ impl CommitMessage {
         result.push(self.title.clone());
         
         if let Some(body) = &self.body {
-            result.push(String::new());
-            result.push(body.clone());
-        }
-        
-        if !self.marks.is_empty() {
-            result.push(String::new());
-            result.extend(self.marks.clone());
+            if !body.is_empty() {
+                result.push(String::new());
+                result.push(body.clone());
+            }
         }
         
         result.join("\n")

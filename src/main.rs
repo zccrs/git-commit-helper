@@ -30,6 +30,10 @@ enum Commands {
         /// 指定 git 仓库路径，默认为当前目录
         #[arg(short, long)]
         path: Option<PathBuf>,
+
+        /// 强制安装
+        #[arg(short, long)]
+        force: bool,
     },
     /// 管理 AI 服务配置
     Service {
@@ -113,8 +117,8 @@ async fn main() -> Result<()> {
             }
             Ok(())
         }
-        Some(Commands::Install { path }) => {
-            install::install_git_hook(path)?;
+        Some(Commands::Install { path, force }) => {
+            install::install_git_hook(path, force)?;
             Ok(())
         }
         Some(Commands::Service { command }) => {

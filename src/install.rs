@@ -3,11 +3,19 @@ use std::fs;
 use std::path::{Path, PathBuf};
 use std::process::Command;
 
-pub fn install_git_hook(repo_path: Option<PathBuf>) -> Result<()> {
+pub fn install_git_hook(repo_path: Option<PathBuf>, force: bool) -> Result<()> {
     let repo_path = repo_path.unwrap_or_else(|| PathBuf::from("."));
     let git_dir = find_git_dir(&repo_path)?;
     let hooks_dir = git_dir.join("hooks");
     let commit_msg_hook = hooks_dir.join("commit-msg");
+
+    // 检查 hook 文件是否已存在
+    if commit_msg_hook.exists() && !force {
+        return Err(anyhow::anyhow!(
+            "Hook 文件已存在: {}。使用 --force 选项强制安装。",
+            commit_msg_hook.display()
+        ));
+    }
 
     // 获取当前二进制的路径
     let current_exe = std::env::current_exe()?;
@@ -34,7 +42,9 @@ exec {} "$1"
         fs::set_permissions(&commit_msg_hook, fs::Permissions::from_mode(0o755))?;
     }
 
-    println!("Git hook 已成功安装到: {}", commit_msg_hook.display());
+    println!("Git hook 已{}安装到: {}", 
+        if force { "强制" } else { "" },
+        commit_msg_hook.display());
     Ok(())
 }
 
