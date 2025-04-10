@@ -101,6 +101,44 @@ git-commit-helper service set-default # 设置默认服务
    - 选择是否需要中英双语格式
    - 确认后自动提交
 
+## 打包说明
+
+本项目支持打包为以下格式：
+
+### Arch Linux 包
+
+```bash
+# 使用 PKGBUILD 构建
+./install.sh package arch
+# 或直接使用
+makepkg -sf
+```
+
+### Debian 包
+
+```bash
+# 使用脚本构建
+./install.sh package deb
+# 或直接使用
+dpkg-buildpackage -us -uc
+```
+
+### RPM 包
+
+```bash
+# 使用脚本构建
+./install.sh package rpm
+# 或直接使用
+rpmbuild -ba git-commit-helper.spec
+```
+
+### 依赖说明
+
+打包工具依赖：
+- Arch Linux: `pacman -S base-devel`
+- Debian/Ubuntu: `apt install build-essential devscripts debhelper`
+- Fedora/RHEL: `dnf install rpm-build rpmdevtools`
+
 ## 贡献
 
 欢迎提交 Issue 和 Pull Request！
