@@ -1,0 +1,20 @@
+[package]
+name = "git-commit-helper"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+tokio = { version = "1.0", features = ["full"] }
+reqwest = { version = "0.11", features = ["json"] }
+anyhow = "1.0"
+async-trait = "0.1"
+config = "0.13"
+regex = "1.10"
+textwrap = "0.16"
+clap = { version = "4.4", features = ["derive"] }
+dialoguer = "0.11"
+directories = "5.0"
+env_logger = "0.10"
+log = "0.4"
