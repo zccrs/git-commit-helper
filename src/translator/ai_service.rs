@@ -10,7 +10,7 @@ pub struct DeepSeekTranslator {
     model: String,
 }
 
-pub struct OpenAITranslator {  // Changed from ChatGPTTranslator
+pub struct OpenAITranslator {
     api_key: String,
     endpoint: String,
     model: String,
@@ -52,7 +52,7 @@ impl DeepSeekTranslator {
     }
 }
 
-impl OpenAITranslator {  // Changed from ChatGPTTranslator
+impl OpenAITranslator {
     pub fn new(config: &AIServiceConfig) -> Self {
         Self {
             api_key: config.api_key.clone(),
@@ -112,6 +112,20 @@ impl GrokTranslator {
     }
 }
 
+// 添加一个新的工具函数
+fn get_translation_prompt(text: &str) -> String {
+    format!(
+        r#"You are a professional translator. Please translate the following Chinese text to English. 
+        Important rules:
+        1. Keep all English content, numbers, and English punctuation unchanged
+        2. Do not translate any content inside English double quotes
+        3. Preserve the case of all English words
+
+        Text to translate: {}"#,
+        text
+    )
+}
+
 #[async_trait]
 impl Translator for DeepSeekTranslator {
     async fn translate(&self, text: &str) -> anyhow::Result<String> {
@@ -123,7 +137,7 @@ impl Translator for DeepSeekTranslator {
             "messages": [
                 {
                     "role": "system",
-                    "content": "You are a professional translator. Translate the following Chinese text to English. Keep the translation accurate and natural."
+                    "content": get_translation_prompt(text)
                 },
                 {
                     "role": "user",
@@ -144,7 +158,6 @@ impl Translator for DeepSeekTranslator {
 
         debug!("收到响应: {:#?}", response);
 
-        // 检查状态码
         if !response.status().is_success() {
             let error_json = response.json::<serde_json::Value>().await?;
             debug!("响应内容: {}", serde_json::to_string_pretty(&error_json)?);
@@ -163,9 +176,9 @@ impl Translator for DeepSeekTranslator {
 }
 
 #[async_trait]
-impl Translator for OpenAITranslator {  // Changed from ChatGPTTranslator
+impl Translator for OpenAITranslator {
     async fn translate(&self, text: &str) -> anyhow::Result<String> {
-        debug!("使用 OpenAI 进行翻译，API Endpoint: {}", self.endpoint);  // Changed message
+        debug!("使用 OpenAI 进行翻译，API Endpoint: {}", self.endpoint);
         let client = reqwest::Client::new();
         let url = format!("{}/chat/completions", self.endpoint);
         let body = serde_json::json!({
@@ -173,7 +186,7 @@ impl Translator for OpenAITranslator {  // Changed from ChatGPTTranslator
             "messages": [
                 {
                     "role": "system",
-                    "content": "You are a professional translator. Translate the following Chinese text to English. Keep the translation accurate and natural."
+                    "content": get_translation_prompt(text)
                 },
                 {
                     "role": "user",
@@ -221,8 +234,12 @@ impl Translator for ClaudeTranslator {
             "model": self.model,
             "messages": [
                 {
+                    "role": "system",
+                    "content": get_translation_prompt(text)
+                },
+                {
                     "role": "user",
-                    "content": format!("Translate the following Chinese text to English: {}", text)
+                    "content": text
                 }
             ]
         });
@@ -268,7 +285,7 @@ impl Translator for CopilotTranslator {
             "messages": [
                 {
                     "role": "system",
-                    "content": "You are a professional translator. Translate the following Chinese text to English. Keep the translation accurate and natural."
+                    "content": get_translation_prompt(text)
                 },
                 {
                     "role": "user",
@@ -315,7 +332,7 @@ impl Translator for GeminiTranslator {
         let body = serde_json::json!({
             "contents": [{
                 "parts": [{
-                    "text": format!("Translate the following Chinese text to English: {}", text)
+                    "text": get_translation_prompt(text)
                 }]
             }]
         });
@@ -360,7 +377,7 @@ impl Translator for GrokTranslator {
             "messages": [
                 {
                     "role": "system",
-                    "content": "You are a professional translator. Translate the following Chinese text to English. Keep the translation accurate and natural."
+                    "content": get_translation_prompt(text)
                 },
                 {
                     "role": "user",
@@ -415,7 +432,6 @@ pub async fn translate_with_fallback(config: &Config, text: &str) -> anyhow::Res
     }
     tried_services.push(config.default_service.clone());
 
-    // 依次尝试其他服务
     for service_config in &config.services {
         if tried_services.contains(&service_config.service) {
             continue;
@@ -428,7 +444,6 @@ pub async fn translate_with_fallback(config: &Config, text: &str) -> anyhow::Res
         tried_services.push(service_config.service.clone());
     }
 
-    // 所有自动尝试都失败了，询问用户选择重试
     while let Some(service) = select_retry_service(config, &tried_services)? {
         debug!("用户选择使用 {:?} 重试翻译", service);
         if let Some(result) = try_translate(&service, config, text).await {
@@ -486,7 +501,7 @@ fn select_retry_service(config: &Config, tried_services: &[AIService]) -> anyhow
 pub fn create_translator_for_service(config: &AIServiceConfig) -> anyhow::Result<Box<dyn Translator>> {
     Ok(match config.service {
         AIService::DeepSeek => Box::new(DeepSeekTranslator::new(config)),
-        AIService::OpenAI => Box::new(OpenAITranslator::new(config)),  // Changed from ChatGPT
+        AIService::OpenAI => Box::new(OpenAITranslator::new(config)),
         AIService::Claude => Box::new(ClaudeTranslator::new(config)),
         AIService::Copilot => Box::new(CopilotTranslator::new(config)),
         AIService::Gemini => Box::new(GeminiTranslator::new(config)),
