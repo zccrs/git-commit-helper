@@ -65,7 +65,7 @@ pub async fn process_commit_msg(path: &Path) -> anyhow::Result<()> {
     Ok(())
 }
 
-fn format_body(en_body: Option<&str>, cn_title: &str, cn_body: Option<&str>, marks: &[String]) -> String {
+pub fn format_body(en_body: Option<&str>, cn_title: &str, cn_body: Option<&str>, marks: &[String]) -> String {
     let mut parts = Vec::new();
 
     // 1. 英文正文
@@ -96,6 +96,6 @@ fn contains_chinese(text: &str) -> bool {
     text.chars().any(|c| c as u32 >= 0x4E00 && c as u32 <= 0x9FFF)
 }
 
-fn wrap_text(text: &str, max_length: usize) -> String {
+pub fn wrap_text(text: &str, max_length: usize) -> String {
     fill(text, max_length)
 }

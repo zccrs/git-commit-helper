@@ -3,12 +3,13 @@ use clap::{Parser, Subcommand};
 use dialoguer::{Confirm, Select, Input};
 use log::debug;
 use std::path::PathBuf;
-use crate::config::AIService;  // 添加导入
+use crate::config::AIService;
 
 mod config;
 mod git;
 mod translator;
 mod install;
+mod suggest;  // 添加新模块
 
 #[derive(Parser)]
 #[command(author, version, about, long_about = None)]
@@ -58,6 +59,12 @@ enum Commands {
         /// 要翻译的文本内容
         #[arg(short, long)]
         text: Option<String>,
+    },
+    /// 生成提交信息建议
+    Suggest {
+        /// 提交消息的类型
+        #[arg(short, long)]
+        r#type: Option<String>,
     },
 }
 
@@ -268,6 +275,9 @@ async fn main() -> Result<()> {
                 }
                 Err(e) => Err(e)
             }
+        }
+        Some(Commands::Suggest { r#type }) => {
+            suggest::generate_commit_message(r#type).await
         }
         None => {
             let commit_msg_path = cli.commit_msg_file.ok_or_else(|| {
