@@ -7,21 +7,25 @@ use crate::translator::Translator;
 pub struct DeepSeekTranslator {
     api_key: String,
     endpoint: String,
+    model: String,
 }
 
 pub struct ChatGPTTranslator {
     api_key: String,
     endpoint: String,
+    model: String,
 }
 
 pub struct ClaudeTranslator {
     api_key: String,
     endpoint: String,
+    model: String,
 }
 
 pub struct CopilotTranslator {
     api_key: String,
     endpoint: String,
+    model: String,
 }
 
 impl DeepSeekTranslator {
@@ -30,6 +34,8 @@ impl DeepSeekTranslator {
             api_key: config.api_key.clone(),
             endpoint: config.api_endpoint.clone()
                 .unwrap_or_else(|| "https://api.deepseek.com/v1".into()),
+            model: config.model.clone()
+                .unwrap_or_else(|| "deepseek-chat".into()),
         }
     }
 }
@@ -40,6 +46,8 @@ impl ChatGPTTranslator {
             api_key: config.api_key.clone(),
             endpoint: config.api_endpoint.clone()
                 .unwrap_or_else(|| "https://api.openai.com/v1".into()),
+            model: config.model.clone()
+                .unwrap_or_else(|| "gpt-3.5-turbo".into()),
         }
     }
 }
@@ -50,6 +58,8 @@ impl ClaudeTranslator {
             api_key: config.api_key.clone(),
             endpoint: config.api_endpoint.clone()
                 .unwrap_or_else(|| "https://api.anthropic.com/v1".into()),
+            model: config.model.clone()
+                .unwrap_or_else(|| "claude-3-sonnet-20240229".into()),
         }
     }
 }
@@ -60,6 +70,8 @@ impl CopilotTranslator {
             api_key: config.api_key.clone(),
             endpoint: config.api_endpoint.clone()
                 .unwrap_or_else(|| "https://api.github.com/copilot/v1".into()),
+            model: config.model.clone()
+                .unwrap_or_else(|| "copilot-chat".into()),
         }
     }
 }
@@ -71,6 +83,7 @@ impl Translator for DeepSeekTranslator {
         let client = reqwest::Client::new();
         let url = format!("{}/chat/completions", self.endpoint);
         let body = serde_json::json!({
+            "model": self.model,
             "messages": [
                 {
                     "role": "system",
@@ -94,6 +107,15 @@ impl Translator for DeepSeekTranslator {
             .await?;
 
         debug!("收到响应: {:#?}", response);
+
+        // 检查状态码
+        if !response.status().is_success() {
+            let error_json = response.json::<serde_json::Value>().await?;
+            debug!("响应内容: {}", serde_json::to_string_pretty(&error_json)?);
+            return Err(anyhow::anyhow!("API 调用失败: {}", 
+                error_json["error"]["message"].as_str().unwrap_or("未知错误")));
+        }
+
         let result = response.json::<serde_json::Value>().await?;
         debug!("响应内容: {}", serde_json::to_string_pretty(&result)?);
 
@@ -111,7 +133,7 @@ impl Translator for ChatGPTTranslator {
         let client = reqwest::Client::new();
         let url = format!("{}/chat/completions", self.endpoint);
         let body = serde_json::json!({
-            "model": "gpt-3.5-turbo",
+            "model": self.model,
             "messages": [
                 {
                     "role": "system",
@@ -135,6 +157,14 @@ impl Translator for ChatGPTTranslator {
             .await?;
 
         debug!("收到响应: {:#?}", response);
+
+        if !response.status().is_success() {
+            let error_json = response.json::<serde_json::Value>().await?;
+            debug!("响应内容: {}", serde_json::to_string_pretty(&error_json)?);
+            return Err(anyhow::anyhow!("API 调用失败: {}", 
+                error_json["error"]["message"].as_str().unwrap_or("未知错误")));
+        }
+
         let result = response.json::<serde_json::Value>().await?;
         debug!("响应内容: {}", serde_json::to_string_pretty(&result)?);
 
@@ -152,7 +182,7 @@ impl Translator for ClaudeTranslator {
         let client = reqwest::Client::new();
         let url = format!("{}/messages", self.endpoint);
         let body = serde_json::json!({
-            "model": "claude-2",
+            "model": self.model,
             "messages": [
                 {
                     "role": "user",
@@ -173,6 +203,14 @@ impl Translator for ClaudeTranslator {
             .await?;
 
         debug!("收到响应: {:#?}", response);
+
+        if !response.status().is_success() {
+            let error_json = response.json::<serde_json::Value>().await?;
+            debug!("响应内容: {}", serde_json::to_string_pretty(&error_json)?);
+            return Err(anyhow::anyhow!("API 调用失败: {}", 
+                error_json["error"]["message"].as_str().unwrap_or("未知错误")));
+        }
+
         let result = response.json::<serde_json::Value>().await?;
         debug!("响应内容: {}", serde_json::to_string_pretty(&result)?);
 
@@ -190,6 +228,7 @@ impl Translator for CopilotTranslator {
         let client = reqwest::Client::new();
         let url = format!("{}/chat", self.endpoint);
         let body = serde_json::json!({
+            "model": self.model,
             "messages": [
                 {
                     "role": "system",
@@ -213,6 +252,14 @@ impl Translator for CopilotTranslator {
             .await?;
 
         debug!("收到响应: {:#?}", response);
+
+        if !response.status().is_success() {
+            let error_json = response.json::<serde_json::Value>().await?;
+            debug!("响应内容: {}", serde_json::to_string_pretty(&error_json)?);
+            return Err(anyhow::anyhow!("API 调用失败: {}", 
+                error_json["error"]["message"].as_str().unwrap_or("未知错误")));
+        }
+
         let result = response.json::<serde_json::Value>().await?;
         debug!("响应内容: {}", serde_json::to_string_pretty(&result)?);
 

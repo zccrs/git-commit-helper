@@ -18,6 +18,7 @@ pub struct AIServiceConfig {
     pub service: AIService,
     pub api_key: String,
     pub api_endpoint: Option<String>,
+    pub model: Option<String>,  // 新增字段
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
@@ -153,6 +154,7 @@ impl Config {
                 service: service.clone(),
                 api_key,
                 api_endpoint: if api_endpoint.is_empty() { None } else { Some(api_endpoint) },
+                model: None,
             };
 
             services.push(config);
@@ -282,8 +284,8 @@ impl Config {
             })
             .interact()?;
 
-        let service = self.services[selection - 1].service.clone();
-        let new_config = Config::input_service_config(service).await?;
+        let old_config = &self.services[selection - 1];
+        let new_config = Config::input_service_config_with_default(old_config).await?;
         self.services[selection - 1] = new_config;
         self.save()?;
         info!("AI 服务修改成功");
@@ -367,19 +369,46 @@ impl Config {
     }
 
     pub async fn input_service_config(service: AIService) -> Result<AIServiceConfig> {
+        Config::input_service_config_with_default(&AIServiceConfig {
+            service,
+            api_key: String::new(),
+            api_endpoint: None,
+            model: None,
+        }).await
+    }
+
+    pub async fn input_service_config_with_default(default: &AIServiceConfig) -> Result<AIServiceConfig> {
+        let default_key = &default.api_key;
         let api_key: String = Input::new()
             .with_prompt("请输入 API Key")
+            .with_initial_text(default_key)
             .interact_text()?;
 
+        let default_endpoint = default.api_endpoint.as_deref().unwrap_or("");
         let api_endpoint: String = Input::new()
             .with_prompt("请输入 API Endpoint (可选，直接回车使用默认值)")
+            .with_initial_text(default_endpoint)
+            .allow_empty(true)
+            .interact_text()?;
+
+        let default_model = default.model.as_deref().unwrap_or("");
+        let default_model_name = match default.service {
+            AIService::DeepSeek => "deepseek-chat",
+            AIService::ChatGPT => "gpt-3.5-turbo",
+            AIService::Claude => "claude-3-sonnet-20240229",
+            AIService::Copilot => "copilot-chat",
+        };
+        let model: String = Input::new()
+            .with_prompt(format!("请输入模型名称 (可选，直接回车使用默认值) [{}]", default_model_name))
+            .with_initial_text(default_model)
             .allow_empty(true)
             .interact_text()?;
 
         Ok(AIServiceConfig {
-            service,
+            service: default.service.clone(),
             api_key,
             api_endpoint: if api_endpoint.is_empty() { None } else { Some(api_endpoint) },
+            model: if model.is_empty() { None } else { Some(model) },
         })
     }
 
