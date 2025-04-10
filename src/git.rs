@@ -29,7 +29,7 @@ pub async fn process_commit_msg(path: &Path) -> anyhow::Result<()> {
 
     info!("检测到中文内容，准备翻译");
 
-    if !Confirm::new()
+    if !Confirm::with_theme(&dialoguer::theme::ColorfulTheme::default())
         .with_prompt("检测到提交信息包含中文，是否需要翻译？")
         .default(true)
         .interact()? {

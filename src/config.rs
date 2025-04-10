@@ -109,10 +109,11 @@ impl Config {
                 println!("{}. {:?}", i + 1, s.service);
             }
 
-            if !Confirm::new()
+            if !Confirm::with_theme(&dialoguer::theme::ColorfulTheme::default())
                 .with_prompt("是否继续添加 AI 服务？")
                 .default(services.is_empty())
-                .interact()? {
+                .interact()?
+            {
                 break;
             }
 
@@ -173,7 +174,7 @@ impl Config {
         let services_len = services.len();
         let default_index: usize = Input::new()
             .with_prompt("请输入对应的数字")
-            .validate_with(move |input: &usize| -> Result<(), &str> {
+            .validate_with(|input: &usize| -> Result<(), &str> {
                 if *input >= 1 && *input <= services_len {
                     Ok(())
                 } else {
@@ -273,18 +274,16 @@ impl Config {
             println!("{}. {:?}", i + 1, s.service);
         }
 
-        let services_len = self.services.len();
-        let selection = Input::<String>::new()
+        let selection = Input::<String>::with_theme(&dialoguer::theme::ColorfulTheme::default())
             .with_prompt("请输入要编辑的服务编号")
             .report(true)
-            .validate_with(move |input: &String| -> Result<(), &str> {
-                match input.parse::<usize>() {
-                    Ok(n) if n >= 1 && n <= services_len => Ok(()),
-                    _ => Err("输入的数字超出范围")
-                }
-            })
             .interact()?
             .parse::<usize>()?;
+
+        // 验证选择的服务编号是否有效
+        if selection < 1 || selection > self.services.len() {
+            return Err(anyhow::anyhow!("无效的服务编号"));
+        }
 
         let old_config = &self.services[selection - 1];
         let new_config = Config::input_service_config_with_default(old_config).await?;
@@ -308,7 +307,7 @@ impl Config {
         let selection = Input::<String>::new()
             .with_prompt("请输入要删除的服务编号")
             .report(true)
-            .validate_with(move |input: &String| -> Result<(), &str> {
+            .validate_with(|input: &String| -> Result<(), &str> {
                 match input.parse::<usize>() {
                     Ok(n) if n >= 1 && n <= services_len => Ok(()),
                     _ => Err("输入的数字超出范围")
@@ -342,7 +341,7 @@ impl Config {
         let selection = Input::<String>::new()
             .with_prompt("请输入要设为默认的服务编号")
             .report(true)
-            .validate_with(move |input: &String| -> Result<(), &str> {
+            .validate_with(|input: &String| -> Result<(), &str> {
                 match input.parse::<usize>() {
                     Ok(n) if n >= 1 && n <= services_len => Ok(()),
                     _ => Err("输入的数字超出范围")

@@ -340,11 +340,13 @@ fn select_retry_service(config: &Config, tried_services: &[AIService]) -> anyhow
         .collect();
 
     println!("\n之前的翻译尝试都失败了，是否要使用其他服务重试？");
-    if !Confirm::new().default(true).interact()? {
+    if !Confirm::with_theme(&dialoguer::theme::ColorfulTheme::default())
+        .default(true)
+        .interact()? {
         return Ok(None);
     }
 
-    let selection = Select::new()
+    let selection = Select::with_theme(&dialoguer::theme::ColorfulTheme::default())
         .with_prompt("请选择要使用的服务")
         .items(&options)
         .default(0)

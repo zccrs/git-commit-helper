@@ -52,7 +52,7 @@ pub fn install_git_hook(repo_path: Option<PathBuf>, force: bool) -> Result<()> {
 fn handle_existing_hook(hook_path: &Path) -> Result<(bool, bool)> {
     println!("检测到已存在的 commit-msg hook");
     
-    let keep_old = Confirm::new()
+    let keep_old = Confirm::with_theme(&dialoguer::theme::ColorfulTheme::default())
         .with_prompt("是否保留已存在的 hook 功能？")
         .default(true)
         .interact()?;
@@ -72,7 +72,7 @@ fn handle_existing_hook(hook_path: &Path) -> Result<(bool, bool)> {
         "先执行翻译程序，再执行原 hook",
         "先执行原 hook，再执行翻译程序"
     ];
-    let selection = Select::new()
+    let selection = Select::with_theme(&dialoguer::theme::ColorfulTheme::default())
         .with_prompt("请选择执行顺序")
         .items(&options)
         .default(0)
