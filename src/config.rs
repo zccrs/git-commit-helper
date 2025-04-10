@@ -24,15 +24,17 @@ pub struct AIServiceConfig {
 #[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
 pub enum AIService {
     DeepSeek,
-    ChatGPT,
+    OpenAI,  // Changed from ChatGPT
     Claude,
     Copilot,
+    Gemini,  // 新增
+    Grok,    // 新增
 }
 
 impl Config {
     pub fn new() -> Self {
         Self {
-            default_service: AIService::ChatGPT, // 默认服务
+            default_service: AIService::OpenAI, // Changed from ChatGPT
             services: Vec::new(),
         }
     }
@@ -41,7 +43,7 @@ impl Config {
         let config_path = Self::config_path()?;
         debug!("尝试加载配置文件: {}", config_path.display());
         
-        if !config_path.exists() {
+        if !config_path.exists() {  // 移除多余的括号
             warn!("配置文件不存在: {}", config_path.display());
             return Err(anyhow::anyhow!("配置文件不存在，请先运行 'git-commit-helper config' 进行配置"));
         }
@@ -119,7 +121,7 @@ impl Config {
 
             println!("\n请选择要添加的 AI 服务:");
             println!("1) DeepSeek");
-            println!("2) ChatGPT");
+            println!("2) OpenAI");
             println!("3) Claude");
             println!("4) Copilot");
 
@@ -137,7 +139,7 @@ impl Config {
 
             let service = match selection {
                 1 => AIService::DeepSeek,
-                2 => AIService::ChatGPT,
+                2 => AIService::OpenAI,
                 3 => AIService::Claude,
                 4 => AIService::Copilot,
                 _ => unreachable!(),
@@ -251,8 +253,7 @@ impl Config {
         Ok(())
     }
 
-    pub async fn add_service(&mut self) -> Result<()> {
-        let service = self.select_ai_service_type()?;
+    pub async fn add_service(&mut self, service: AIService) -> Result<()> {
         let config = Config::input_service_config(service).await?;
         if self.services.len() == 1 {
             self.default_service = config.service.clone();
@@ -356,21 +357,6 @@ impl Config {
         Ok(())
     }
 
-    fn select_ai_service_type(&self) -> Result<AIService> {
-        let selection = Select::new()
-            .with_prompt("请选择 AI 服务类型")
-            .items(&["DeepSeek", "ChatGPT", "Claude", "Copilot"])
-            .interact()?;
-
-        Ok(match selection {
-            0 => AIService::DeepSeek,
-            1 => AIService::ChatGPT,
-            2 => AIService::Claude,
-            3 => AIService::Copilot,
-            _ => unreachable!(),
-        })
-    }
-
     pub async fn input_service_config(service: AIService) -> Result<AIServiceConfig> {
         Config::input_service_config_with_default(&AIServiceConfig {
             service,
@@ -397,9 +383,11 @@ impl Config {
         let default_model = default.model.as_deref().unwrap_or("");
         let default_model_name = match default.service {
             AIService::DeepSeek => "deepseek-chat",
-            AIService::ChatGPT => "gpt-3.5-turbo",
+            AIService::OpenAI => "gpt-3.5-turbo",
             AIService::Claude => "claude-3-sonnet-20240229",
             AIService::Copilot => "copilot-chat",
+            AIService::Gemini => "gemini-pro",
+            AIService::Grok => "grok-1",
         };
         let model: String = Input::new()
             .with_prompt(format!("请输入模型名称 (可选，直接回车使用默认值) [{}]", default_model_name))

@@ -1,8 +1,9 @@
 use anyhow::Result;
 use clap::{Parser, Subcommand};
-use dialoguer::{Confirm, Select};
+use dialoguer::{Confirm, Select, Input};
 use log::debug;
 use std::path::PathBuf;
+use crate::config::AIService;  // 添加导入
 
 mod config;
 mod git;
@@ -124,7 +125,40 @@ async fn main() -> Result<()> {
         Some(Commands::Service { command }) => {
             let mut config = config::Config::load().unwrap_or_else(|_| config::Config::new());
             match command {
-                ServiceCommands::Add => config.add_service().await?,
+                ServiceCommands::Add => {
+                    let selected_service = {
+                        println!("\n请选择要添加的 AI 服务:");
+                        println!("1) DeepSeek");
+                        println!("2) OpenAI");
+                        println!("3) Claude");
+                        println!("4) Copilot");
+                        println!("5) Gemini");
+                        println!("6) Grok");
+
+                        let selection = Input::<String>::new()
+                            .with_prompt("请输入对应的数字")
+                            .report(true)
+                            .validate_with(|input: &String| -> Result<(), &str> {
+                                match input.parse::<usize>() {
+                                    Ok(n) if n >= 1 && n <= 6 => Ok(()),
+                                    _ => Err("请输入 1-6 之间的数字")
+                                }
+                            })
+                            .interact()?
+                            .parse::<usize>()?;
+
+                        match selection {
+                            1 => AIService::DeepSeek,
+                            2 => AIService::OpenAI,
+                            3 => AIService::Claude,
+                            4 => AIService::Copilot,
+                            5 => AIService::Gemini,
+                            6 => AIService::Grok,
+                            _ => unreachable!(),
+                        }
+                    };
+                    config.add_service(selected_service).await?;
+                }
                 ServiceCommands::Edit => config.edit_service().await?,
                 ServiceCommands::Remove => config.remove_service().await?,
                 ServiceCommands::SetDefault => config.set_default_service().await?,

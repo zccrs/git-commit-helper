@@ -10,7 +10,7 @@ pub struct DeepSeekTranslator {
     model: String,
 }
 
-pub struct ChatGPTTranslator {
+pub struct OpenAITranslator {  // Changed from ChatGPTTranslator
     api_key: String,
     endpoint: String,
     model: String,
@@ -28,6 +28,18 @@ pub struct CopilotTranslator {
     model: String,
 }
 
+pub struct GeminiTranslator {
+    api_key: String,
+    endpoint: String,
+    model: String,
+}
+
+pub struct GrokTranslator {
+    api_key: String,
+    endpoint: String,
+    model: String,
+}
+
 impl DeepSeekTranslator {
     pub fn new(config: &AIServiceConfig) -> Self {
         Self {
@@ -40,7 +52,7 @@ impl DeepSeekTranslator {
     }
 }
 
-impl ChatGPTTranslator {
+impl OpenAITranslator {  // Changed from ChatGPTTranslator
     pub fn new(config: &AIServiceConfig) -> Self {
         Self {
             api_key: config.api_key.clone(),
@@ -72,6 +84,30 @@ impl CopilotTranslator {
                 .unwrap_or_else(|| "https://api.github.com/copilot/v1".into()),
             model: config.model.clone()
                 .unwrap_or_else(|| "copilot-chat".into()),
+        }
+    }
+}
+
+impl GeminiTranslator {
+    pub fn new(config: &AIServiceConfig) -> Self {
+        Self {
+            api_key: config.api_key.clone(),
+            endpoint: config.api_endpoint.clone()
+                .unwrap_or_else(|| "https://generativelanguage.googleapis.com/v1".into()),
+            model: config.model.clone()
+                .unwrap_or_else(|| "gemini-pro".into()),
+        }
+    }
+}
+
+impl GrokTranslator {
+    pub fn new(config: &AIServiceConfig) -> Self {
+        Self {
+            api_key: config.api_key.clone(),
+            endpoint: config.api_endpoint.clone()
+                .unwrap_or_else(|| "https://api.grok.x.ai/v1".into()),
+            model: config.model.clone()
+                .unwrap_or_else(|| "grok-1".into()),
         }
     }
 }
@@ -127,9 +163,9 @@ impl Translator for DeepSeekTranslator {
 }
 
 #[async_trait]
-impl Translator for ChatGPTTranslator {
+impl Translator for OpenAITranslator {  // Changed from ChatGPTTranslator
     async fn translate(&self, text: &str) -> anyhow::Result<String> {
-        debug!("使用 ChatGPT 进行翻译，API Endpoint: {}", self.endpoint);
+        debug!("使用 OpenAI 进行翻译，API Endpoint: {}", self.endpoint);  // Changed message
         let client = reqwest::Client::new();
         let url = format!("{}/chat/completions", self.endpoint);
         let body = serde_json::json!({
@@ -270,6 +306,98 @@ impl Translator for CopilotTranslator {
     }
 }
 
+#[async_trait]
+impl Translator for GeminiTranslator {
+    async fn translate(&self, text: &str) -> anyhow::Result<String> {
+        debug!("使用 Gemini 进行翻译，API Endpoint: {}", self.endpoint);
+        let client = reqwest::Client::new();
+        let url = format!("{}/models/{}:generateContent", self.endpoint, self.model);
+        let body = serde_json::json!({
+            "contents": [{
+                "parts": [{
+                    "text": format!("Translate the following Chinese text to English: {}", text)
+                }]
+            }]
+        });
+
+        debug!("发送请求到: {}", url);
+        debug!("请求体: {}", serde_json::to_string_pretty(&body).unwrap_or_default());
+
+        let response = client
+            .post(&url)
+            .header("Authorization", format!("Bearer {}", self.api_key))
+            .json(&body)
+            .send()
+            .await?;
+
+        debug!("收到响应: {:#?}", response);
+
+        if !response.status().is_success() {
+            let error_json = response.json::<serde_json::Value>().await?;
+            debug!("响应内容: {}", serde_json::to_string_pretty(&error_json)?);
+            return Err(anyhow::anyhow!("API 调用失败: {}", 
+                error_json["error"]["message"].as_str().unwrap_or("未知错误")));
+        }
+
+        let result = response.json::<serde_json::Value>().await?;
+        debug!("响应内容: {}", serde_json::to_string_pretty(&result)?);
+
+        Ok(result["candidates"][0]["content"]["parts"][0]["text"]
+            .as_str()
+            .unwrap_or_default()
+            .to_string())
+    }
+}
+
+#[async_trait]
+impl Translator for GrokTranslator {
+    async fn translate(&self, text: &str) -> anyhow::Result<String> {
+        debug!("使用 Grok 进行翻译，API Endpoint: {}", self.endpoint);
+        let client = reqwest::Client::new();
+        let url = format!("{}/chat/completions", self.endpoint);
+        let body = serde_json::json!({
+            "model": self.model,
+            "messages": [
+                {
+                    "role": "system",
+                    "content": "You are a professional translator. Translate the following Chinese text to English. Keep the translation accurate and natural."
+                },
+                {
+                    "role": "user",
+                    "content": text
+                }
+            ]
+        });
+
+        debug!("发送请求到: {}", url);
+        debug!("请求体: {}", serde_json::to_string_pretty(&body).unwrap_or_default());
+
+        let response = client
+            .post(&url)
+            .header("Authorization", format!("Bearer {}", self.api_key))
+            .json(&body)
+            .send()
+            .await?;
+
+        debug!("收到响应: {:#?}", response);
+
+        if !response.status().is_success() {
+            let error_json = response.json::<serde_json::Value>().await?;
+            debug!("响应内容: {}", serde_json::to_string_pretty(&error_json)?);
+            return Err(anyhow::anyhow!("API 调用失败: {}", 
+                error_json["error"]["message"].as_str().unwrap_or("未知错误")));
+        }
+
+        let result = response.json::<serde_json::Value>().await?;
+        debug!("响应内容: {}", serde_json::to_string_pretty(&result)?);
+
+        Ok(result["choices"][0]["message"]["content"]
+            .as_str()
+            .unwrap_or_default()
+            .to_string())
+    }
+}
+
 pub fn create_translator(config: &Config) -> anyhow::Result<Box<dyn Translator>> {
     info!("创建 {:?} 翻译器", config.default_service);
     let service_config = config.services.iter()
@@ -358,8 +486,10 @@ fn select_retry_service(config: &Config, tried_services: &[AIService]) -> anyhow
 pub fn create_translator_for_service(config: &AIServiceConfig) -> anyhow::Result<Box<dyn Translator>> {
     Ok(match config.service {
         AIService::DeepSeek => Box::new(DeepSeekTranslator::new(config)),
-        AIService::ChatGPT => Box::new(ChatGPTTranslator::new(config)),
+        AIService::OpenAI => Box::new(OpenAITranslator::new(config)),  // Changed from ChatGPT
         AIService::Claude => Box::new(ClaudeTranslator::new(config)),
         AIService::Copilot => Box::new(CopilotTranslator::new(config)),
+        AIService::Gemini => Box::new(GeminiTranslator::new(config)),
+        AIService::Grok => Box::new(GrokTranslator::new(config)),
     })
 }
