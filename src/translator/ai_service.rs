@@ -140,6 +140,39 @@ fn wrap_chinese_text(text: &str, max_width: usize) -> String {
 }
 
 fn get_translation_prompt(text: &str) -> String {
+    if text.contains("diff --git") {
+        // Git diff 内容的提示语
+        return String::from(
+            "Please analyze the git diff content and generate a detailed bilingual commit message with:
+            1. First line in English: type: message (under 50 characters)
+            2. Empty line after the title
+            3. Detailed explanation in English (what was changed and why)
+            4. Empty line after English explanation
+            5. Chinese title and explanation (translate the English content)
+            6. Type must be one of: feat/fix/docs/style/refactor/test/chore
+            7. Focus on both WHAT changed and WHY it was necessary
+            8. Include any important technical details or context
+            9. Prefix the entire message with '[NO_TRANSLATE]' to prevent re-translation
+
+            Example response format:
+            [NO_TRANSLATE]
+            feat: add user authentication module
+
+            - Implement JWT-based authentication system
+            - Add user login and registration endpoints
+            - Include password hashing with bcrypt
+            - Set up token refresh mechanism
+
+            feat: 添加用户认证模块
+
+            - 实现基于 JWT 的认证系统
+            - 添加用户登录和注册端点
+            - 包含使用 bcrypt 的密码哈希处理
+            - 设置令牌刷新机制
+
+            Please respond with ONLY the commit message following this format.");
+    }
+
     format!(
         r#"You are a professional translator. Please translate the following Chinese text to English. 
         Important rules:
@@ -160,6 +193,15 @@ fn get_translation_prompt(text: &str) -> String {
 }
 
 fn extract_translation(response: &str) -> String {
+    // 处理带有 NO_TRANSLATE 标记的内容
+    if response.trim().starts_with("[NO_TRANSLATE]") {
+        return response.trim()
+            .strip_prefix("[NO_TRANSLATE]")
+            .unwrap_or(response)
+            .trim()
+            .to_string();
+    }
+
     // 查找最后一个 "English translation:" 后的内容
     if let Some(idx) = response.rfind("English translation:") {
         let translation = response[idx..].lines()
@@ -472,6 +514,11 @@ pub fn create_translator(config: &Config) -> anyhow::Result<Box<dyn Translator>>
 
 pub async fn translate_with_fallback(config: &Config, text: &str) -> anyhow::Result<String> {
     let mut tried_services = Vec::new();
+
+    // 如果内容已经是双语的（带有 NO_TRANSLATE 标记），则直接返回
+    if text.trim().starts_with("[NO_TRANSLATE]") {
+        return Ok(text.trim().to_string());
+    }
 
     debug!("尝试使用默认服务 {:?} 进行翻译", config.default_service);
     if let Some(result) = try_translate(&config.default_service, config, text).await {

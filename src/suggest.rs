@@ -1,5 +1,5 @@
 use crate::config;
-use crate::git;
+use crate::git;  // 添加这个导入
 use crate::translator::ai_service;
 use anyhow::Result;
 use dialoguer::{Confirm};
@@ -46,16 +46,14 @@ pub async fn generate_commit_message(commit_type: Option<String>) -> Result<()> 
         message = ensure_commit_type(&message, &t);
     }
 
-    let title = message.lines().next().unwrap_or_default().to_string();
-    let body = message.lines().skip(2).collect::<Vec<_>>().join("\n");
-
-    // 保存为临时提交信息文件
-    let temp_file = std::env::temp_dir().join("COMMIT_EDITMSG");
-    let mut content = if body.is_empty() {
-        title
-    } else {
-        format!("{}\n\n{}", title, body)
-    };
+    // 处理换行
+    let content = message.lines().map(|line| {
+        if line.trim().is_empty() {
+            line.to_string()
+        } else {
+            git::wrap_text(line, 72)
+        }
+    }).collect::<Vec<_>>().join("\n");
     
     // 预览生成的提交信息
     println!("\n生成的提交信息预览:");
@@ -63,23 +61,7 @@ pub async fn generate_commit_message(commit_type: Option<String>) -> Result<()> 
     println!("{}", content);
     println!("----------------------------------------");
 
-    // 询问用户是否需要翻译
-    if Confirm::with_theme(&dialoguer::theme::ColorfulTheme::default())
-        .with_prompt("是否需要翻译为中英双语格式？")
-        .default(true)
-        .interact()? 
-    {
-        std::fs::write(&temp_file, &content)?;
-        git::process_commit_msg(&temp_file).await?;
-        content = std::fs::read_to_string(&temp_file)?;
-        
-        println!("\n翻译后的提交信息预览:");
-        println!("----------------------------------------");
-        println!("{}", content);
-        println!("----------------------------------------");
-    }
-
-    // 询问用户是否确认提交
+    // 移除翻译相关的询问，直接询问用户是否确认提交
     if !Confirm::with_theme(&dialoguer::theme::ColorfulTheme::default())
         .with_prompt("是否使用此提交信息？")
         .default(true)
