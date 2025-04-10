@@ -6,30 +6,51 @@ use dialoguer::{Confirm};
 use log::{debug, info};
 use std::process::Command;
 
-pub async fn generate_commit_message(commit_type: Option<String>) -> Result<()> {
+pub async fn generate_commit_message(commit_type: Option<String>, user_description: Option<String>) -> Result<()> {
     let diff = get_staged_diff()?;
     if diff.is_empty() {
         return Err(anyhow::anyhow!("没有已暂存的改动，请先使用 git add 添加改动"));
     }
 
-    let prompt = format!(
-        "我将给你展示一些 git diff 的内容，请你帮我总结这些改动并生成一个符合规范的 git commit 信息。\
-        提交信息的格式要求：\
-        1. 第一行为标题，简要说明改动内容\
-        2. 标题要精简，不超过50个字符\
-        3. 标题的格式为：type: message，其中type为改动类型，message为改动说明\
-        4. 如果提供了具体的type则必须使用该type\
-        5. 如果没有提供type，则根据改动内容自行判断使用以下类型之一：\
-           feat: 新功能\
-           fix: 修复问题\
-           docs: 文档变更\
-           style: 代码格式调整\
-           refactor: 代码重构\
-           test: 测试相关\
-           chore: 构建或辅助工具变更\
-        \n\n以下是改动内容：\n{}", 
-        diff
-    );
+    let prompt = match user_description {
+        Some(desc) => format!(
+            "我将给你展示一些 git diff 的内容和用户的描述，请你帮我生成一个符合规范的 git commit 信息。\
+            用户描述的内容是这次改动的重点，git diff 作为辅助参考。\
+            提交信息的格式要求：\
+            1. 第一行为标题，简要说明改动内容\
+            2. 标题要精简，不超过50个字符\
+            3. 标题的格式为：type: message，其中type为改动类型，message为改动说明\
+            4. 如果提供了具体的type则必须使用该type\
+            5. 如果没有提供type，则根据改动内容自行判断使用以下类型之一：\
+               feat: 新功能\
+               fix: 修复问题\
+               docs: 文档变更\
+               style: 代码格式调整\
+               refactor: 代码重构\
+               test: 测试相关\
+               chore: 构建或辅助工具变更\
+            \n\n用户的描述：\n{}\n\n改动内容：\n{}", 
+            desc, diff
+        ),
+        None => format!(
+            "我将给你展示一些 git diff 的内容，请你帮我总结这些改动并生成一个符合规范的 git commit 信息。\
+            提交信息的格式要求：\
+            1. 第一行为标题，简要说明改动内容\
+            2. 标题要精简，不超过50个字符\
+            3. 标题的格式为：type: message，其中type为改动类型，message为改动说明\
+            4. 如果提供了具体的type则必须使用该type\
+            5. 如果没有提供type，则根据改动内容自行判断使用以下类型之一：\
+               feat: 新功能\
+               fix: 修复问题\
+               docs: 文档变更\
+               style: 代码格式调整\
+               refactor: 代码重构\
+               test: 测试相关\
+               chore: 构建或辅助工具变更\
+            \n\n以下是改动内容：\n{}", 
+            diff
+        )
+    };
 
     debug!("生成的提示信息：\n{}", prompt);
 
@@ -95,14 +116,17 @@ pub async fn generate_commit_message(commit_type: Option<String>) -> Result<()> 
 }
 
 #[allow(dead_code)]
-pub async fn generate_commit_suggestion(commit_types: &[String]) -> anyhow::Result<String> {
+pub async fn generate_commit_suggestion(commit_types: &[String], user_description: Option<String>) -> anyhow::Result<String> {
     let config = crate::config::Config::load()?;
     let service = config.services.iter()
         .find(|s| s.service == config.default_service)
         .ok_or_else(|| anyhow::anyhow!("找不到默认服务的配置"))?;
 
     let translator = ai_service::create_translator_for_service(service).await?;
-    let prompt = get_staged_diff()?;
+    let prompt = match user_description {
+        Some(desc) => format!("用户描述：\n{}\n\n改动内容：\n{}", desc, get_staged_diff()?),
+        None => get_staged_diff()?
+    };
 
     let message = translator.translate(&prompt).await?.to_string();
     

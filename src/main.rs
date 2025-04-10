@@ -65,6 +65,10 @@ enum Commands {
         /// 提交消息的类型
         #[arg(short, long)]
         r#type: Option<String>,
+
+        /// 用户对改动的描述
+        #[arg(short, long)]
+        description: Option<String>,
     },
 }
 
@@ -276,8 +280,8 @@ async fn main() -> Result<()> {
                 Err(e) => Err(e)
             }
         }
-        Some(Commands::Suggest { r#type }) => {
-            suggest::generate_commit_message(r#type).await
+        Some(Commands::Suggest { r#type, description }) => {
+            suggest::generate_commit_message(r#type, description).await
         }
         None => {
             let commit_msg_path = cli.commit_msg_file.ok_or_else(|| {
