@@ -104,11 +104,19 @@ _git_commit_helper() {
             ;;
         git_commit_helper__suggest)
             opts=""
-            if [[ ${cur} == -* ]] ; then
-                opts="--type -t"
-            fi
-            COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
-            return 0
+            case $prev in
+                -t|--type)
+                    COMPREPLY=( $(compgen -W "feat fix docs style refactor test chore" -- "$cur") )
+                    return
+                    ;;
+                -d|--description)
+                    return
+                    ;;
+                *)
+                    opts="$opts -t --type"
+                    opts="$opts -d --description"
+                    ;;
+            esac
             ;;
     esac
 }

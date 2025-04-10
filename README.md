@@ -144,6 +144,30 @@ a line exceeds the recommended value of git.
 | test | 测试相关 | 添加或修改测试用例 |
 | chore | 其他更新 | 构建过程或辅助工具的变更 |
 
+### 命令行参数
+
+```bash
+# 生成提交信息建议
+git-commit-helper suggest [选项]
+    -t, --type <TYPE>         指定提交类型 (可选)
+    -d, --description <DESC>  提供对改动的描述 (可选)
+```
+
+示例：
+```bash
+# 生成提交信息
+git-commit-helper suggest
+
+# 指定提交类型
+git-commit-helper suggest --type feat
+
+# 提供改动描述
+git-commit-helper suggest --description "修复了用户无法登录的问题"
+
+# 同时指定类型和描述
+git-commit-helper suggest --type fix --description "修复内存泄漏"
+```
+
 ## 📂 项目打包
 
 ```bash

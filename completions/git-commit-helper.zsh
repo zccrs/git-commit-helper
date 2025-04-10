@@ -64,8 +64,8 @@ _git-commit-helper() {
                     ;;
                 suggest)
                     _arguments \
-                        '-t[提交消息的类型]' \
-                        '--type[提交消息的类型]'
+                        {-t,--type}'[指定提交类型]:type:(feat fix docs style refactor test chore)' \
+                        {-d,--description}'[提供对改动的描述]:description:_files'
                     ;;
             esac
             ;;
