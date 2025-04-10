@@ -94,6 +94,7 @@ pub async fn generate_commit_message(commit_type: Option<String>) -> Result<()> 
     Ok(())
 }
 
+#[allow(dead_code)]
 pub async fn generate_commit_suggestion(commit_types: &[String]) -> anyhow::Result<String> {
     let config = crate::config::Config::load()?;
     let service = config.services.iter()
@@ -137,7 +138,7 @@ fn ensure_commit_type(message: &str, commit_types: &[String]) -> String {
     
     if let Some(colon_pos) = first_line.find(':') {
         let current_type = first_line[..colon_pos].trim();
-        if (!commit_types.contains(&current_type.to_string())) {
+        if !commit_types.contains(&current_type.to_string()) {
             return format!("{}: {}", 
                 &commit_types[0], 
                 first_line[colon_pos + 1..].trim()
