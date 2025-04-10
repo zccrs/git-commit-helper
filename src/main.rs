@@ -165,10 +165,15 @@ async fn main() -> Result<()> {
             println!("正在测试 {:?} 服务...", service.service);
             
             let translator = translator::ai_service::create_translator_for_service(service)?;
+            debug!("开始发送翻译请求");
             match translator.translate(&text).await {
                 Ok(result) => {
+                    debug!("收到翻译响应");
                     println!("\n测试结果:");
                     println!("原文: {}", text);
+                    if result.is_empty() {
+                        println!("警告: 收到空的翻译结果！");
+                    }
                     println!("译文: {}", result);
                     println!("\n测试成功！");
                     Ok(())
@@ -180,6 +185,7 @@ async fn main() -> Result<()> {
                     println!("1. API Key 是否正确");
                     println!("2. API Endpoint 是否可访问");
                     println!("3. 网络连接是否正常");
+                    println!("4. 查看日志获取详细信息（设置 RUST_LOG=debug）");
                     Err(e)
                 }
             }

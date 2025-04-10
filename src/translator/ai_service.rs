@@ -69,25 +69,34 @@ impl Translator for DeepSeekTranslator {
     async fn translate(&self, text: &str) -> anyhow::Result<String> {
         debug!("使用 DeepSeek 进行翻译，API Endpoint: {}", self.endpoint);
         let client = reqwest::Client::new();
+        let url = format!("{}/chat/completions", self.endpoint);
+        let body = serde_json::json!({
+            "messages": [
+                {
+                    "role": "system",
+                    "content": "You are a professional translator. Translate the following Chinese text to English. Keep the translation accurate and natural."
+                },
+                {
+                    "role": "user",
+                    "content": text
+                }
+            ]
+        });
+        
+        debug!("发送请求到: {}", url);
+        debug!("请求体: {}", serde_json::to_string_pretty(&body).unwrap_or_default());
+
         let response = client
-            .post(format!("{}/chat/completions", self.endpoint))
+            .post(&url)
             .header("Authorization", format!("Bearer {}", self.api_key))
-            .json(&serde_json::json!({
-                "messages": [
-                    {
-                        "role": "system",
-                        "content": "You are a professional translator. Translate the following Chinese text to English. Keep the translation accurate and natural."
-                    },
-                    {
-                        "role": "user",
-                        "content": text
-                    }
-                ]
-            }))
+            .json(&body)
             .send()
             .await?;
 
+        debug!("收到响应: {:#?}", response);
         let result = response.json::<serde_json::Value>().await?;
+        debug!("响应内容: {}", serde_json::to_string_pretty(&result)?);
+
         Ok(result["choices"][0]["message"]["content"]
             .as_str()
             .unwrap_or_default()
@@ -100,26 +109,35 @@ impl Translator for ChatGPTTranslator {
     async fn translate(&self, text: &str) -> anyhow::Result<String> {
         debug!("使用 ChatGPT 进行翻译，API Endpoint: {}", self.endpoint);
         let client = reqwest::Client::new();
+        let url = format!("{}/chat/completions", self.endpoint);
+        let body = serde_json::json!({
+            "model": "gpt-3.5-turbo",
+            "messages": [
+                {
+                    "role": "system",
+                    "content": "You are a professional translator. Translate the following Chinese text to English. Keep the translation accurate and natural."
+                },
+                {
+                    "role": "user",
+                    "content": text
+                }
+            ]
+        });
+
+        debug!("发送请求到: {}", url);
+        debug!("请求体: {}", serde_json::to_string_pretty(&body).unwrap_or_default());
+
         let response = client
-            .post(format!("{}/chat/completions", self.endpoint))
+            .post(&url)
             .header("Authorization", format!("Bearer {}", self.api_key))
-            .json(&serde_json::json!({
-                "model": "gpt-3.5-turbo",
-                "messages": [
-                    {
-                        "role": "system",
-                        "content": "You are a professional translator. Translate the following Chinese text to English. Keep the translation accurate and natural."
-                    },
-                    {
-                        "role": "user",
-                        "content": text
-                    }
-                ]
-            }))
+            .json(&body)
             .send()
             .await?;
 
+        debug!("收到响应: {:#?}", response);
         let result = response.json::<serde_json::Value>().await?;
+        debug!("响应内容: {}", serde_json::to_string_pretty(&result)?);
+
         Ok(result["choices"][0]["message"]["content"]
             .as_str()
             .unwrap_or_default()
@@ -132,23 +150,32 @@ impl Translator for ClaudeTranslator {
     async fn translate(&self, text: &str) -> anyhow::Result<String> {
         debug!("使用 Claude 进行翻译，API Endpoint: {}", self.endpoint);
         let client = reqwest::Client::new();
+        let url = format!("{}/messages", self.endpoint);
+        let body = serde_json::json!({
+            "model": "claude-2",
+            "messages": [
+                {
+                    "role": "user",
+                    "content": format!("Translate the following Chinese text to English: {}", text)
+                }
+            ]
+        });
+
+        debug!("发送请求到: {}", url);
+        debug!("请求体: {}", serde_json::to_string_pretty(&body).unwrap_or_default());
+
         let response = client
-            .post(format!("{}/messages", self.endpoint))
+            .post(&url)
             .header("Authorization", format!("Bearer {}", self.api_key))
             .header("anthropic-version", "2023-06-01")
-            .json(&serde_json::json!({
-                "model": "claude-2",
-                "messages": [
-                    {
-                        "role": "user",
-                        "content": format!("Translate the following Chinese text to English: {}", text)
-                    }
-                ]
-            }))
+            .json(&body)
             .send()
             .await?;
 
+        debug!("收到响应: {:#?}", response);
         let result = response.json::<serde_json::Value>().await?;
+        debug!("响应内容: {}", serde_json::to_string_pretty(&result)?);
+
         Ok(result["content"][0]["text"]
             .as_str()
             .unwrap_or_default()
@@ -161,25 +188,34 @@ impl Translator for CopilotTranslator {
     async fn translate(&self, text: &str) -> anyhow::Result<String> {
         debug!("使用 Copilot 进行翻译，API Endpoint: {}", self.endpoint);
         let client = reqwest::Client::new();
+        let url = format!("{}/chat", self.endpoint);
+        let body = serde_json::json!({
+            "messages": [
+                {
+                    "role": "system",
+                    "content": "You are a professional translator. Translate the following Chinese text to English. Keep the translation accurate and natural."
+                },
+                {
+                    "role": "user",
+                    "content": text
+                }
+            ]
+        });
+
+        debug!("发送请求到: {}", url);
+        debug!("请求体: {}", serde_json::to_string_pretty(&body).unwrap_or_default());
+
         let response = client
-            .post(format!("{}/chat", self.endpoint))
+            .post(&url)
             .header("Authorization", format!("Bearer {}", self.api_key))
-            .json(&serde_json::json!({
-                "messages": [
-                    {
-                        "role": "system",
-                        "content": "You are a professional translator. Translate the following Chinese text to English. Keep the translation accurate and natural."
-                    },
-                    {
-                        "role": "user",
-                        "content": text
-                    }
-                ]
-            }))
+            .json(&body)
             .send()
             .await?;
 
+        debug!("收到响应: {:#?}", response);
         let result = response.json::<serde_json::Value>().await?;
+        debug!("响应内容: {}", serde_json::to_string_pretty(&result)?);
+
         Ok(result["choices"][0]["message"]["content"]
             .as_str()
             .unwrap_or_default()
