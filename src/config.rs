@@ -1,11 +1,12 @@
 use anyhow::{Context, Result};
-use dialoguer::{Confirm, Input, Select};
+use dialoguer::{Confirm, Input};  // 删除未使用的 Select 导入
 use directories::ProjectDirs;
 use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
 use std::fs;
-use crate::translator::ai_service;
+use crate::translator::{ai_service, CopilotClient};
 use log::{debug, info, warn};
+use dialoguer::console::Term;
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct Config {
@@ -62,7 +63,7 @@ impl Config {
         Box::pin(Self::interactive_config_impl()).await
     }
 
-    async fn interactive_config_impl() -> Result<()> {
+    pub async fn interactive_config_impl() -> Result<()> {
         info!("开始交互式配置...");
         // 询问配置文件存放位置
         let default_path = Self::default_config_path()?;
@@ -145,22 +146,7 @@ impl Config {
                 _ => unreachable!(),
             };
 
-            let api_key: String = Input::new()
-                .with_prompt("请输入 API Key")
-                .interact_text()?;
-
-            let api_endpoint: String = Input::new()
-                .with_prompt("请输入 API Endpoint (可选，直接回车使用默认值)")
-                .allow_empty(true)
-                .interact_text()?;
-
-            let config = AIServiceConfig {
-                service: service.clone(),
-                api_key,
-                api_endpoint: if api_endpoint.is_empty() { None } else { Some(api_endpoint) },
-                model: None,
-            };
-
+            let config = Config::input_service_config(service).await?;
             services.push(config);
         }
 
@@ -207,7 +193,7 @@ impl Config {
             .interact()? 
         {
             println!("正在测试翻译功能...");
-            let translator = ai_service::create_translator(&config)?;
+            let translator = ai_service::create_translator(&config).await?;  // 添加 .await
             match translator.translate("这是一个测试消息，用于验证翻译功能是否正常。").await {
                 Ok(result) => {
                     println!("\n测试结果:");
@@ -224,13 +210,23 @@ impl Config {
                     println!("3. 网络连接是否正常");
 
                     println!("\n请选择操作:");
-                    let options = vec!["重新修改配置", "强制保存配置", "退出"];
-                    match Select::new()
-                        .with_prompt("选择操作")
-                        .items(&options)
-                        .interact()? 
-                    {
-                        0 => {
+                    println!("1. 重新修改配置");
+                    println!("2. 强制保存配置");
+                    println!("3. 退出");
+                    
+                    let selection: usize = Input::new()
+                        .with_prompt("请输入对应的数字")
+                        .validate_with(|input: &usize| -> Result<(), &str> {
+                            if *input >= 1 && *input <= 3 {
+                                Ok(())
+                            } else {
+                                Err("请输入 1-3 之间的数字")
+                            }
+                        })
+                        .interact()?;
+
+                    match selection {
+                        1 => {
                             // 重新获取当前服务的配置
                             let new_config = Config::input_service_config(config.default_service.clone()).await?;
                             config.services.pop(); // 移除失败的配置
@@ -240,7 +236,7 @@ impl Config {
                             // 递归调用测试，使用 Box::pin
                             return Box::pin(Config::interactive_config_impl()).await;
                         },
-                        1 => {
+                        2 => {
                             println!("配置已强制保存，但可能无法正常工作。");
                             return Ok(());
                         },
@@ -254,14 +250,107 @@ impl Config {
     }
 
     pub async fn add_service(&mut self, service: AIService) -> Result<()> {
-        let config = Config::input_service_config(service).await?;
-        if self.services.len() == 1 {
+        // 获取服务配置
+        let config = match service {
+            AIService::Copilot => {
+                println!("Copilot 服务需要 GitHub 身份验证...");
+                
+                // 尝试获取 GitHub token
+                match crate::translator::get_github_token() {
+                    Ok(token) => {
+                        println!("✅ 已成功获取 GitHub 令牌");
+                        // 尝试连接 Copilot API 验证令牌
+                        let editor_version = "1.0.0".to_string();
+                        let client = CopilotClient::new_with_models(token.clone(), editor_version).await;
+                        match client {
+                            Ok(client) => {
+                                println!("✅ GitHub Copilot 认证成功！");
+                                // 获取可用模型
+                                let models = &client.models;                            
+                                if !models.is_empty() {
+                                    println!("\n可用模型:");
+                                    for (i, model) in models.iter().enumerate() {
+                                        println!("  {}. {} ({})", i+1, model.name, model.id);
+                                    }
+                                    
+                                    // 让用户选择模型
+                                    let model_count = models.len();
+                                    let selection = Input::<String>::new()
+                                        .with_prompt("请选择要使用的模型编号 (留空使用默认)")
+                                        .allow_empty(true)
+                                        .validate_with(|input: &String| -> Result<(), &str> {
+                                            if input.is_empty() {
+                                                return Ok(());
+                                            }
+                                            match input.parse::<usize>() {
+                                                Ok(n) if n >= 1 && n <= model_count => Ok(()),
+                                                _ => Err("请输入有效的模型编号或留空")
+                                            }
+                                        })
+                                        .interact()?;
+                                    
+                                    // 处理用户选择
+                                    let model_id = if selection.is_empty() {
+                                        "copilot-chat".to_string()
+                                    } else {
+                                        let idx = selection.parse::<usize>().unwrap() - 1;
+                                        models[idx].id.clone()
+                                    };
+                                    
+                                    // 返回配置，使用用户选择的模型
+                                    AIServiceConfig {
+                                        service: AIService::Copilot,
+                                        api_key: token,
+                                        api_endpoint: None,
+                                        model: Some(model_id),
+                                    }
+                                } else {
+                                    // 如果没有可用模型列表，使用默认模型
+                                    AIServiceConfig {
+                                        service: AIService::Copilot,
+                                        api_key: token,
+                                        api_endpoint: None,
+                                        model: Some("copilot-chat".to_string()),
+                                    }
+                                }
+                            },
+                            Err(e) => {
+                                println!("❌ Copilot API 连接失败: {}", e);
+                                println!("请确保您已订阅 GitHub Copilot 服务并拥有有效权限。");
+                                return Err(anyhow::anyhow!("Copilot 认证失败"));
+                            }
+                        }
+                    },
+                    Err(e) => {
+                        println!("❌ 无法获取 GitHub 令牌: {}", e);
+                        println!("\n请按照以下步骤获取 GitHub 令牌:");
+                        println!("1. 确保您已登录 GitHub 或 VSCode");
+                        println!("2. 如果您使用 VSCode，请安装并登录 GitHub Copilot 扩展");
+                        println!("3. 如果您使用其他编辑器，请检查相应的 GitHub Copilot 配置");
+                        println!("\n按回车键继续...");
+                        Term::stdout().read_line()?;
+                        return Err(anyhow::anyhow!("无法获取 GitHub 令牌"));
+                    }                    
+                }
+            },
+            _ => Config::input_service_config_with_default(&AIServiceConfig {
+                service: service.clone(),
+                api_key: String::new(),
+                api_endpoint: None,
+                model: None,
+            }).await?,
+        };
+        
+        // 不进行测试，直接添加服务
+        if self.services.is_empty() {
             self.default_service = config.service.clone();
         }
         self.services.push(config);
-        
         self.save()?;
-        info!("AI 服务添加成功");
+        
+        println!("✅ {:?} 服务已添加。请稍后使用 'git-commit-helper test' 命令测试该服务。", service);
+        info!("AI 服务已添加（未测试）");
+        
         Ok(())
     }
 
@@ -288,9 +377,14 @@ impl Config {
 
         let old_config = &self.services[selection - 1];
         let new_config = Config::input_service_config_with_default(old_config).await?;
+        
+        // 不进行测试，直接更新服务
         self.services[selection - 1] = new_config;
         self.save()?;
-        info!("AI 服务修改成功");
+        
+        println!("✅ 服务配置已更新。请稍后使用 'git-commit-helper test' 命令测试该服务。");
+        info!("AI 服务已修改（未测试）");
+        
         Ok(())
     }
 
@@ -358,6 +452,7 @@ impl Config {
     }
 
     pub async fn input_service_config(service: AIService) -> Result<AIServiceConfig> {
+        // 对于除 Copilot 以外的服务，使用默认逻辑
         Config::input_service_config_with_default(&AIServiceConfig {
             service,
             api_key: String::new(),
@@ -367,20 +462,94 @@ impl Config {
     }
 
     pub async fn input_service_config_with_default(default: &AIServiceConfig) -> Result<AIServiceConfig> {
-        let default_key = &default.api_key;
+        // 如果是 Copilot 服务，使用特殊处理
+        if default.service == AIService::Copilot {
+            // 为已存在的 Copilot 配置，只询问模型
+            if !default.api_key.is_empty() {
+                // 尝试连接 Copilot API 获取可用模型
+                let editor_version = "1.0.0".to_string();
+                match CopilotClient::new_with_models(default.api_key.clone(), editor_version).await {
+                    Ok(client) => {
+                        let models = &client.models;
+                        if !models.is_empty() {
+                            println!("\n可用模型:");
+                            for (i, model) in models.iter().enumerate() {
+                                println!("  {}. {} ({})", i+1, model.name, model.id);
+                            }
+                            
+                            // 显示当前选择的模型
+                            let current_model = default.model.as_deref().unwrap_or("copilot-chat");
+                            println!("\n当前选择的模型: {}", current_model);
+                            
+                            // 让用户选择模型
+                            let model_count = models.len();
+                            let selection = Input::<String>::new()
+                                .with_prompt("请选择要使用的模型编号 (留空保持当前选择)")
+                                .allow_empty(true)
+                                .validate_with(|input: &String| -> Result<(), &str> {
+                                    if input.is_empty() {
+                                        return Ok(());
+                                    }
+                                    match input.parse::<usize>() {
+                                        Ok(n) if n >= 1 && n <= model_count => Ok(()),
+                                        _ => Err("请输入有效的模型编号或留空")
+                                    }
+                                })
+                                .interact()?;
+                            
+                            // 处理用户选择
+                            let model_id = if selection.is_empty() {
+                                default.model.clone().unwrap_or_else(|| "copilot-chat".to_string())
+                            } else {
+                                let idx = selection.parse::<usize>().unwrap() - 1;
+                                models[idx].id.clone()
+                            };
+                            
+                            return Ok(AIServiceConfig {
+                                service: default.service.clone(),
+                                api_key: default.api_key.clone(),
+                                api_endpoint: None,
+                                model: Some(model_id),
+                            });
+                        }
+                    },
+                    Err(e) => {
+                        println!("⚠️ 无法获取模型列表: {}", e);
+                        println!("将使用之前配置的模型或默认模型。");
+                    }
+                }
+
+                let model: String = Input::new()
+                    .with_prompt("请输入模型名称 (可选，直接回车使用默认值) [copilot-chat]")
+                    .with_initial_text(default.model.as_deref().unwrap_or("copilot-chat"))
+                    .allow_empty(true)
+                    .interact_text()?;
+
+                return Ok(AIServiceConfig {
+                    service: default.service.clone(),
+                    api_key: default.api_key.clone(),  // 保留原有 token
+                    api_endpoint: None,
+                    model: if model.is_empty() { Some("copilot-chat".to_string()) } else { Some(model) },
+                });
+            } else {
+                // 如果没有 API key，需要重新验证
+                // 使用 Box::pin 解决递归调用问题
+                return Box::pin(Config::input_service_config(AIService::Copilot)).await;
+            }
+        }
+
+        // 非 Copilot 服务需要 API Key
         let api_key: String = Input::new()
             .with_prompt("请输入 API Key")
-            .with_initial_text(default_key)
+            .with_initial_text(&default.api_key)
             .interact_text()?;
 
-        let default_endpoint = default.api_endpoint.as_deref().unwrap_or("");
         let api_endpoint: String = Input::new()
             .with_prompt("请输入 API Endpoint (可选，直接回车使用默认值)")
-            .with_initial_text(default_endpoint)
+            .with_initial_text(default.api_endpoint.as_deref().unwrap_or(""))
             .allow_empty(true)
             .interact_text()?;
 
-        let default_model = default.model.as_deref().unwrap_or("");
         let default_model_name = match default.service {
             AIService::DeepSeek => "deepseek-chat",
             AIService::OpenAI => "gpt-3.5-turbo",
@@ -391,7 +560,7 @@ impl Config {
         };
         let model: String = Input::new()
             .with_prompt(format!("请输入模型名称 (可选，直接回车使用默认值) [{}]", default_model_name))
-            .with_initial_text(default_model)
+            .with_initial_text(default.model.as_deref().unwrap_or(""))
             .allow_empty(true)
             .interact_text()?;
 

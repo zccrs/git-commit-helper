@@ -3,6 +3,9 @@ use regex::Regex;
 
 pub mod ai_service;
 
+mod copilot_client; // 添加 CopilotClient 模块
+pub use copilot_client::*;
+
 pub struct CommitMessage {
     pub title: String,
     pub body: Option<String>,

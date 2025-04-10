@@ -36,14 +36,21 @@ pub async fn generate_commit_message(commit_type: Option<String>) -> Result<()> 
     let config = config::Config::load()?;
     info!("使用 {:?} 服务生成提交信息", config.default_service);
     let service = config.get_default_service()?;
-    let translator = ai_service::create_translator_for_service(service)?;
+    let translator = ai_service::create_translator_for_service(service).await?;
     
     println!("\n正在生成提交信息建议...");
-    let mut message = translator.translate(&prompt).await?;
+    let mut message = translator.translate(&prompt).await?.to_string();
+
+    // 移除各种 AI 返回的元信息标记
+    message = message
+        .trim_start_matches("[NO_TRANSLATE]")
+        .trim_start_matches("、、、plaintext")
+        .trim()
+        .to_string();
 
     // 如果提供了具体的type，确保使用该type
     if let Some(t) = commit_type {
-        message = ensure_commit_type(&message, &t);
+        message = ensure_commit_type(&message, &[t]);
     }
 
     // 处理换行
@@ -87,6 +94,32 @@ pub async fn generate_commit_message(commit_type: Option<String>) -> Result<()> 
     Ok(())
 }
 
+pub async fn generate_commit_suggestion(commit_types: &[String]) -> anyhow::Result<String> {
+    let config = crate::config::Config::load()?;
+    let service = config.services.iter()
+        .find(|s| s.service == config.default_service)
+        .ok_or_else(|| anyhow::anyhow!("找不到默认服务的配置"))?;
+
+    let translator = ai_service::create_translator_for_service(service).await?;
+    let prompt = get_staged_diff()?;
+
+    let message = translator.translate(&prompt).await?.to_string();
+    
+    // 移除各种 AI 返回的元信息标记
+    let message = message
+        .trim_start_matches("[NO_TRANSLATE]")
+        .trim_start_matches("plaintext")
+        .trim()
+        .to_string();
+    
+    // 如果有指定的提交类型，确保使用这些类型
+    if !commit_types.is_empty() {
+        return Ok(ensure_commit_type(&message, commit_types));
+    }
+
+    Ok(message)
+}
+
 fn get_staged_diff() -> Result<String> {
     let output = Command::new("git")
         .args(["diff", "--cached", "--no-prefix"])
@@ -99,19 +132,19 @@ fn get_staged_diff() -> Result<String> {
     Ok(String::from_utf8(output.stdout)?)
 }
 
-fn ensure_commit_type(message: &str, required_type: &str) -> String {
+fn ensure_commit_type(message: &str, commit_types: &[String]) -> String {
     let first_line = message.lines().next().unwrap_or_default();
     
     if let Some(colon_pos) = first_line.find(':') {
         let current_type = first_line[..colon_pos].trim();
-        if current_type != required_type {
+        if (!commit_types.contains(&current_type.to_string())) {
             return format!("{}: {}", 
-                required_type, 
+                &commit_types[0], 
                 first_line[colon_pos + 1..].trim()
             ) + &message[first_line.len()..];
         }
     } else {
-        return format!("{}: {}", required_type, first_line) + &message[first_line.len()..];
+        return format!("{}: {}", &commit_types[0], first_line) + &message[first_line.len()..];
     }
     
     message.to_string()

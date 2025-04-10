@@ -2,7 +2,8 @@ use async_trait::async_trait;
 use dialoguer::{Confirm, Select};
 use log::{debug, info, warn};
 use crate::config::{AIService, Config, AIServiceConfig};
-use crate::translator::Translator;
+use crate::translator::{Translator, Message};
+use super::CopilotClient;
 
 pub struct DeepSeekTranslator {
     api_key: String,
@@ -23,8 +24,7 @@ pub struct ClaudeTranslator {
 }
 
 pub struct CopilotTranslator {
-    api_key: String,
-    endpoint: String,
+    client: CopilotClient,
     model: String,
 }
 
@@ -77,14 +77,8 @@ impl ClaudeTranslator {
 }
 
 impl CopilotTranslator {
-    pub fn new(config: &AIServiceConfig) -> Self {
-        Self {
-            api_key: config.api_key.clone(),
-            endpoint: config.api_endpoint.clone()
-                .unwrap_or_else(|| "https://api.github.com/copilot/v1".into()),
-            model: config.model.clone()
-                .unwrap_or_else(|| "copilot-chat".into()),
-        }
+    pub fn new(client: CopilotClient, model: String) -> Self {
+        Self { client, model }
     }
 }
 
@@ -153,6 +147,7 @@ fn get_translation_prompt(text: &str) -> String {
             7. Focus on both WHAT changed and WHY it was necessary
             8. Include any important technical details or context
             9. Prefix the entire message with '[NO_TRANSLATE]' to prevent re-translation
+            10. DO NOT wrap the response in any markdown, code block markers like
 
             Example response format:
             [NO_TRANSLATE]
@@ -366,49 +361,22 @@ impl Translator for ClaudeTranslator {
 #[async_trait]
 impl Translator for CopilotTranslator {
     async fn translate(&self, text: &str) -> anyhow::Result<String> {
-        debug!("使用 Copilot 进行翻译，API Endpoint: {}", self.endpoint);
-        let client = reqwest::Client::new();
-        let url = format!("{}/chat", self.endpoint);
-        let body = serde_json::json!({
-            "model": self.model,
-            "messages": [
-                {
-                    "role": "system",
-                    "content": get_translation_prompt(text)
-                },
-                {
-                    "role": "user",
-                    "content": text
-                }
-            ]
-        });
-
-        debug!("发送请求到: {}", url);
-        debug!("请求体: {}", serde_json::to_string_pretty(&body).unwrap_or_default());
-
-        let response = client
-            .post(&url)
-            .header("Authorization", format!("Bearer {}", self.api_key))
-            .json(&body)
-            .send()
-            .await?;
-
-        debug!("收到响应: {:#?}", response);
-
-        if !response.status().is_success() {
-            let error_json = response.json::<serde_json::Value>().await?;
-            debug!("响应内容: {}", serde_json::to_string_pretty(&error_json)?);
-            return Err(anyhow::anyhow!("API 调用失败: {}", 
-                error_json["error"]["message"].as_str().unwrap_or("未知错误")));
-        }
-
-        let result = response.json::<serde_json::Value>().await?;
-        debug!("响应内容: {}", serde_json::to_string_pretty(&result)?);
-
-        let translation = result["choices"][0]["message"]["content"]
-            .as_str()
+        debug!("使用 Copilot 进行翻译");
+        let messages = vec![
+            Message {
+                role: "system".to_string(),
+                content: get_translation_prompt(text).to_string(),
+            },
+            Message {
+                role: "user".to_string(),
+                content: text.to_string(),
+            },
+        ];
+        let response = self.client.chat_completion(messages, self.model.clone()).await?;
+        let translation = response.choices.get(0)
+            .map(|choice| choice.message.content.clone())
             .unwrap_or_default();
-        Ok(extract_translation(translation))
+        Ok(extract_translation(&translation))
     }
 }
 
@@ -504,12 +472,12 @@ impl Translator for GrokTranslator {
     }
 }
 
-pub fn create_translator(config: &Config) -> anyhow::Result<Box<dyn Translator>> {
+pub async fn create_translator(config: &Config) -> anyhow::Result<Box<dyn Translator>> {
     info!("创建 {:?} 翻译器", config.default_service);
     let service_config = config.services.iter()
         .find(|s| s.service == config.default_service)
         .ok_or_else(|| anyhow::anyhow!("找不到默认服务的配置"))?;
-    create_translator_for_service(service_config)
+    create_translator_for_service(service_config).await
 }
 
 pub async fn translate_with_fallback(config: &Config, text: &str) -> anyhow::Result<String> {
@@ -553,7 +521,7 @@ async fn try_translate(service: &AIService, config: &Config, text: &str) -> Opti
     let service_config = config.services.iter()
         .find(|s| s.service == *service)?;
 
-    let translator = create_translator_for_service(service_config).ok()?;
+    let translator = create_translator_for_service(service_config).await.ok()?;
     match translator.translate(text).await {
         Ok(result) => Some(Ok(result)),
         Err(e) => {
@@ -592,12 +560,17 @@ fn select_retry_service(config: &Config, tried_services: &[AIService]) -> anyhow
     Ok(Some(available_services[selection].service.clone()))
 }
 
-pub fn create_translator_for_service(config: &AIServiceConfig) -> anyhow::Result<Box<dyn Translator>> {
+pub async fn create_translator_for_service(config: &AIServiceConfig) -> anyhow::Result<Box<dyn Translator>> {
     Ok(match config.service {
         AIService::DeepSeek => Box::new(DeepSeekTranslator::new(config)),
         AIService::OpenAI => Box::new(OpenAITranslator::new(config)),
         AIService::Claude => Box::new(ClaudeTranslator::new(config)),
-        AIService::Copilot => Box::new(CopilotTranslator::new(config)),
+        AIService::Copilot => {
+            let editor_version = "1.0.0".to_string();
+            let client = CopilotClient::new_with_models(config.api_key.clone(), editor_version).await?;
+            let model_id = config.model.clone().unwrap_or_else(|| "copilot-chat".to_string());
+            Box::new(CopilotTranslator::new(client, model_id))
+        },
         AIService::Gemini => Box::new(GeminiTranslator::new(config)),
         AIService::Grok => Box::new(GrokTranslator::new(config)),
     })

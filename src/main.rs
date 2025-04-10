@@ -222,7 +222,7 @@ async fn main() -> Result<()> {
             let service = &config.services[selection];
             println!("正在测试 {:?} 服务...", service.service);
             
-            let translator = translator::ai_service::create_translator_for_service(service)?;
+            let translator = translator::ai_service::create_translator_for_service(service).await?;
             debug!("开始发送翻译请求");
             match translator.translate(&text).await {
                 Ok(result) => {
@@ -265,7 +265,7 @@ async fn main() -> Result<()> {
             let service = config.get_default_service()?;
             println!("正在使用 {:?} 服务进行翻译...", service.service);
             
-            let translator = translator::ai_service::create_translator_for_service(service)?;
+            let translator = translator::ai_service::create_translator_for_service(service).await?;
             match translator.translate(&content).await {
                 Ok(result) => {
                     println!("\n翻译结果:");
