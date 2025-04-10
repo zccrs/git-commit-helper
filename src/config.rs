@@ -403,6 +403,20 @@ impl Config {
         })
     }
 
+    pub fn get_default_service(&self) -> Result<&AIServiceConfig> {
+        if self.services.is_empty() {
+            return Err(anyhow::anyhow!("没有配置任何 AI 服务"));
+        }
+
+        // 查找默认服务
+        if let Some(service) = self.services.iter().find(|s| s.service == self.default_service) {
+            return Ok(service);
+        }
+
+        // 如果没有设置默认服务或默认服务不存在，返回第一个服务
+        Ok(&self.services[0])
+    }
+
     fn save(&self) -> Result<()> {
         let config_path = Self::config_path()?;
         if let Some(parent) = config_path.parent() {

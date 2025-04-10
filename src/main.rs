@@ -49,6 +49,16 @@ enum Commands {
         #[arg(short, long, default_value = "这是一个测试消息。")]
         text: String,
     },
+    /// 翻译中文内容为英文
+    Translate {
+        /// 要翻译的文件路径
+        #[arg(short, long)]
+        file: Option<PathBuf>,
+
+        /// 要翻译的文本内容
+        #[arg(short, long)]
+        text: Option<String>,
+    },
 }
 
 #[derive(Subcommand, PartialEq)]
@@ -229,6 +239,34 @@ async fn main() -> Result<()> {
                     println!("4. 查看日志获取详细信息（设置 RUST_LOG=debug）");
                     Err(e)
                 }
+            }
+        }
+        Some(Commands::Translate { file, text }) => {
+            let config = config::Config::load()?;
+            if config.services.is_empty() {
+                return Err(anyhow::anyhow!("没有配置任何 AI 服务，请先添加服务"));
+            }
+
+            let content = if let Some(file_path) = file {
+                std::fs::read_to_string(file_path)?
+            } else if let Some(text) = text {
+                text
+            } else {
+                return Err(anyhow::anyhow!("请提供要翻译的文件（-f）或文本内容（-t）"));
+            };
+
+            let service = config.get_default_service()?;
+            println!("正在使用 {:?} 服务进行翻译...", service.service);
+            
+            let translator = translator::ai_service::create_translator_for_service(service)?;
+            match translator.translate(&content).await {
+                Ok(result) => {
+                    println!("\n翻译结果:");
+                    println!("原文: {}", content);
+                    println!("译文: {}", result);
+                    Ok(())
+                }
+                Err(e) => Err(e)
             }
         }
         None => {
