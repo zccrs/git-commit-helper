@@ -165,7 +165,8 @@ fn get_translation_prompt(text: &str) -> String {
             - 包含使用 bcrypt 的密码哈希处理
             - 设置令牌刷新机制
 
-            Please respond with ONLY the commit message following this format.");
+            Please respond with ONLY the commit message following this format, 
+            DO NOT end commit titles with any punctuation.");
     }
 
     format!(
