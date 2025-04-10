@@ -12,7 +12,6 @@ Cargo.lock
 
 # Arch Linux packaging
 /pkg/
-/src/
 /*.pkg.tar.zst
 /*.tar.gz
 /cargo-home/
