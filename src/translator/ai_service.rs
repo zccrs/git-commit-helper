@@ -113,6 +113,32 @@ impl GrokTranslator {
 }
 
 // 添加一个新的工具函数
+fn wrap_chinese_text(text: &str, max_width: usize) -> String {
+    let mut result = String::new();
+    let mut current_line = String::new();
+    let mut current_width = 0;
+
+    for c in text.chars() {
+        let char_width = if c.is_ascii() { 1 } else { 2 };
+        
+        if current_width + char_width > max_width {
+            result.push_str(&current_line);
+            result.push('\n');
+            current_line.clear();
+            current_width = 0;
+        }
+        
+        current_line.push(c);
+        current_width += char_width;
+    }
+
+    if !current_line.is_empty() {
+        result.push_str(&current_line);
+    }
+
+    result
+}
+
 fn get_translation_prompt(text: &str) -> String {
     format!(
         r#"You are a professional translator. Please translate the following Chinese text to English. 
@@ -120,9 +146,16 @@ fn get_translation_prompt(text: &str) -> String {
         1. Keep all English content, numbers, and English punctuation unchanged
         2. Do not translate any content inside English double quotes
         3. Preserve the case of all English words
+        4. For the original Chinese content, add line breaks to keep each line under 72 characters
+        5. Return both the wrapped Chinese text and its English translation
 
-        Text to translate: {}"#,
-        text
+        Text to translate:
+        
+        Chinese (wrapped):
+        {}
+
+        Please provide the English translation:"#,
+        wrap_chinese_text(text, 72)
     )
 }
 
