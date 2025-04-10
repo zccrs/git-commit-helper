@@ -250,6 +250,10 @@ impl Config {
     }
 
     pub async fn add_service(&mut self, service: AIService) -> Result<()> {
+        Box::pin(self.add_service_impl(service)).await
+    }
+
+    async fn add_service_impl(&mut self, service: AIService) -> Result<()> {
         // 获取服务配置
         let config = match service {
             AIService::Copilot => {
@@ -341,16 +345,83 @@ impl Config {
             }).await?,
         };
         
-        // 不进行测试，直接添加服务
+        // 添加服务
         if self.services.is_empty() {
             self.default_service = config.service.clone();
         }
-        self.services.push(config);
-        self.save()?;
+        self.services.push(config.clone());
+
+        // 提供测试选项
+        if Confirm::new()
+            .with_prompt("是否要测试该服务？")
+            .default(true)
+            .interact()?
+        {
+            println!("正在测试 {:?} 服务...", config.service);
+            let translator = ai_service::create_translator_for_service(&config).await?;
+            let text = "这是一个测试消息，用于验证翻译功能是否正常。";
+            debug!("开始发送翻译请求");
+            match translator.translate(text).await {
+                Ok(result) => {
+                    debug!("收到翻译响应");
+                    println!("\n测试结果:");
+                    println!("原文: {}", text);
+                    if result.is_empty() {
+                        println!("警告: 收到空的翻译结果！");
+                    }
+                    println!("译文: {}", result);
+                    println!("\n✅ 测试成功！服务已添加并可正常使用。");
+                    self.save()?;
+                },
+                Err(e) => {
+                    println!("\n❌ 测试失败！错误信息:");
+                    println!("{}", e);
+                    println!("\n请检查:");
+                    println!("1. API Key 是否正确");
+                    println!("2. API Endpoint 是否可访问");
+                    println!("3. 网络连接是否正常");
+                    println!("4. 查看日志获取详细信息（设置 RUST_LOG=debug）");
+
+                    println!("\n请选择操作:");
+                    println!("1. 重新配置服务");
+                    println!("2. 强制保存配置");
+                    println!("3. 放弃添加");
+                    
+                    let selection: usize = Input::new()
+                        .with_prompt("请输入对应的数字")
+                        .validate_with(|input: &usize| -> Result<(), &str> {
+                            if *input >= 1 && *input <= 3 {
+                                Ok(())
+                            } else {
+                                Err("请输入 1-3 之间的数字")
+                            }
+                        })
+                        .interact()?;
+
+                    match selection {
+                        1 => {
+                            // 移除刚添加的服务
+                            self.services.pop();
+                            // 使用 Box::pin 包装递归调用
+                            return Box::pin(self.add_service_impl(service)).await;
+                        },
+                        2 => {
+                            println!("配置已强制保存，但服务可能无法正常工作。");
+                            self.save()?;
+                        },
+                        _ => {
+                            self.services.pop(); // 移除失败的服务
+                            return Err(anyhow::anyhow!("已取消添加服务"));
+                        }
+                    }
+                }
+            }
+        } else {
+            self.save()?;
+            println!("✅ {:?} 服务已添加（未测试）", service);
+        }
         
-        println!("✅ {:?} 服务已添加。请稍后使用 'git-commit-helper test' 命令测试该服务。", service);
-        info!("AI 服务已添加（未测试）");
-        
+        info!("AI 服务已添加");
         Ok(())
     }
 
