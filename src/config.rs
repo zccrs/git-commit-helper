@@ -122,16 +122,17 @@ impl Config {
             println!("3) Claude");
             println!("4) Copilot");
 
-            let selection: usize = Input::new()
+            let selection = Input::<String>::new()
                 .with_prompt("请输入对应的数字")
-                .validate_with(|input: &usize| -> Result<(), &str> {
-                    if *input >= 1 && *input <= 4 {
-                        Ok(())
-                    } else {
-                        Err("请输入 1-4 之间的数字")
+                .report(true)
+                .validate_with(|input: &String| -> Result<(), &str> {
+                    match input.parse::<usize>() {
+                        Ok(n) if n >= 1 && n <= 4 => Ok(()),
+                        _ => Err("请输入 1-4 之间的数字")
                     }
                 })
-                .interact()?;
+                .interact()?
+                .parse::<usize>()?;
 
             let service = match selection {
                 1 => AIService::DeepSeek,
@@ -273,16 +274,17 @@ impl Config {
         }
 
         let services_len = self.services.len();
-        let selection: usize = Input::new()
+        let selection = Input::<String>::new()
             .with_prompt("请输入要编辑的服务编号")
-            .validate_with(move |input: &usize| -> Result<(), &str> {
-                if *input >= 1 && *input <= services_len {
-                    Ok(())
-                } else {
-                    Err("输入的数字超出范围")
+            .report(true)
+            .validate_with(move |input: &String| -> Result<(), &str> {
+                match input.parse::<usize>() {
+                    Ok(n) if n >= 1 && n <= services_len => Ok(()),
+                    _ => Err("输入的数字超出范围")
                 }
             })
-            .interact()?;
+            .interact()?
+            .parse::<usize>()?;
 
         let old_config = &self.services[selection - 1];
         let new_config = Config::input_service_config_with_default(old_config).await?;
@@ -303,16 +305,17 @@ impl Config {
         }
 
         let services_len = self.services.len();
-        let selection: usize = Input::new()
+        let selection = Input::<String>::new()
             .with_prompt("请输入要删除的服务编号")
-            .validate_with(move |input: &usize| -> Result<(), &str> {
-                if *input >= 1 && *input <= services_len {
-                    Ok(())
-                } else {
-                    Err("输入的数字超出范围")
+            .report(true)
+            .validate_with(move |input: &String| -> Result<(), &str> {
+                match input.parse::<usize>() {
+                    Ok(n) if n >= 1 && n <= services_len => Ok(()),
+                    _ => Err("输入的数字超出范围")
                 }
             })
-            .interact()?;
+            .interact()?
+            .parse::<usize>()?;
 
         let removed = self.services.remove(selection - 1);
         
@@ -336,16 +339,17 @@ impl Config {
         }
 
         let services_len = self.services.len();
-        let selection: usize = Input::new()
+        let selection = Input::<String>::new()
             .with_prompt("请输入要设为默认的服务编号")
-            .validate_with(move |input: &usize| -> Result<(), &str> {
-                if *input >= 1 && *input <= services_len {
-                    Ok(())
-                } else {
-                    Err("输入的数字超出范围")
+            .report(true)
+            .validate_with(move |input: &String| -> Result<(), &str> {
+                match input.parse::<usize>() {
+                    Ok(n) if n >= 1 && n <= services_len => Ok(()),
+                    _ => Err("输入的数字超出范围")
                 }
             })
-            .interact()?;
+            .interact()?
+            .parse::<usize>()?;
 
         self.default_service = self.services[selection - 1].service.clone();
         self.save()?;
