@@ -5,6 +5,7 @@ Cargo.lock
 .idea/
 .vscode/
 *.swp
+cargo-home
 
 # Shell completion files
 .zcompdump
