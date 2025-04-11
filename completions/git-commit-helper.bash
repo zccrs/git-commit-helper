@@ -41,6 +41,9 @@ _git_commit_helper() {
             git_commit_helper__service,set-default)
                 cmd="git_commit_helper__service__set_default"
                 ;;
+            git_commit_helper__service,set-timeout)
+                cmd="git_commit_helper__service__set_timeout"
+                ;;
             git_commit_helper__service,list)
                 cmd="git_commit_helper__service__list"
                 ;;
@@ -78,7 +81,7 @@ _git_commit_helper() {
             return 0
             ;;
         git_commit_helper__service)
-            opts="add edit remove set-default list test help"
+            opts="add edit remove set-default set-timeout list test help"
             COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
             return 0
             ;;
@@ -90,6 +93,14 @@ _git_commit_helper() {
             opts=""
             if [[ ${cur} == -* ]] ; then
                 opts="--text -t"
+            fi
+            COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
+            return 0
+            ;;
+        git_commit_helper__service__set_timeout)
+            opts=""
+            if [[ ${cur} == -* ]] ; then
+                opts="--seconds -s"
             fi
             COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
             return 0

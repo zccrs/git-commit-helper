@@ -16,11 +16,18 @@ pub struct Config {
     pub services: Vec<AIServiceConfig>,
     #[serde(default = "default_ai_review")]
     pub ai_review: bool,  // 添加 AI Review 开关
+    #[serde(default = "default_timeout")]
+    pub timeout_seconds: u64,  // 添加请求超时时间设置
 }
 
 // 添加默认值函数
 fn default_ai_review() -> bool {
     true
+}
+
+// 添加默认超时时间函数
+fn default_timeout() -> u64 {
+    20
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -47,6 +54,7 @@ impl Config {
             default_service: AIService::OpenAI, // Changed from ChatGPT
             services: Vec::new(),
             ai_review: true,  // 默认开启
+            timeout_seconds: default_timeout(),
         }
     }
 
@@ -185,6 +193,7 @@ impl Config {
             default_service: services[default_index - 1].service.clone(),
             services,
             ai_review: true,  // 默认开启
+            timeout_seconds: default_timeout(),
         };
 
         // 确保配置目录存在

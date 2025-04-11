@@ -171,6 +171,7 @@ git-commit-helper translate /path/to/existing/file    # 文件路径
 | ai edit | 编辑 AI 服务配置 | `git-commit-helper ai edit` |
 | ai remove | 删除 AI 服务 | `git-commit-helper ai remove` |
 | ai set-default | 设置默认服务 | `git-commit-helper ai set-default` |
+| ai set-timeout | 设置请求超时 | `git-commit-helper ai set-timeout -s 30` |
 | ai list | 列出所有服务 | `git-commit-helper ai list` |
 | ai test | 测试指定服务 | `git-commit-helper ai test [-t "测试文本"]` |
 | translate | 翻译内容 | `git-commit-helper translate [-f 文件] [-t 文本]` |

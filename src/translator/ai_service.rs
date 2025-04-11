@@ -9,18 +9,21 @@ pub struct DeepSeekTranslator {
     api_key: String,
     endpoint: String,
     model: String,
+    timeout_seconds: u64,
 }
 
 pub struct OpenAITranslator {
     api_key: String,
     endpoint: String,
     model: String,
+    timeout_seconds: u64,
 }
 
 pub struct ClaudeTranslator {
     api_key: String,
     endpoint: String,
     model: String,
+    timeout_seconds: u64,
 }
 
 pub struct CopilotTranslator {
@@ -32,12 +35,14 @@ pub struct GeminiTranslator {
     api_key: String,
     endpoint: String,
     model: String,
+    timeout_seconds: u64,
 }
 
 pub struct GrokTranslator {
     api_key: String,
     endpoint: String,
     model: String,
+    timeout_seconds: u64,
 }
 
 impl DeepSeekTranslator {
@@ -48,6 +53,9 @@ impl DeepSeekTranslator {
                 .unwrap_or_else(|| "https://api.deepseek.com/v1".into()),
             model: config.model.clone()
                 .unwrap_or_else(|| "deepseek-chat".into()),
+            timeout_seconds: crate::config::Config::load()
+                .map(|c| c.timeout_seconds)
+                .unwrap_or(20),
         }
     }
 }
@@ -60,6 +68,9 @@ impl OpenAITranslator {
                 .unwrap_or_else(|| "https://api.openai.com/v1".into()),
             model: config.model.clone()
                 .unwrap_or_else(|| "gpt-3.5-turbo".into()),
+            timeout_seconds: crate::config::Config::load()
+                .map(|c| c.timeout_seconds)
+                .unwrap_or(20),
         }
     }
 }
@@ -72,6 +83,9 @@ impl ClaudeTranslator {
                 .unwrap_or_else(|| "https://api.anthropic.com/v1".into()),
             model: config.model.clone()
                 .unwrap_or_else(|| "claude-3-sonnet-20240229".into()),
+            timeout_seconds: crate::config::Config::load()
+                .map(|c| c.timeout_seconds)
+                .unwrap_or(20),
         }
     }
 }
@@ -90,6 +104,9 @@ impl GeminiTranslator {
                 .unwrap_or_else(|| "https://generativelanguage.googleapis.com/v1".into()),
             model: config.model.clone()
                 .unwrap_or_else(|| "gemini-pro".into()),
+            timeout_seconds: crate::config::Config::load()
+                .map(|c| c.timeout_seconds)
+                .unwrap_or(20),
         }
     }
 }
@@ -102,6 +119,9 @@ impl GrokTranslator {
                 .unwrap_or_else(|| "https://api.grok.x.ai/v1".into()),
             model: config.model.clone()
                 .unwrap_or_else(|| "grok-1".into()),
+            timeout_seconds: crate::config::Config::load()
+                .map(|c| c.timeout_seconds)
+                .unwrap_or(20),
         }
     }
 }
@@ -205,7 +225,7 @@ impl Translator for DeepSeekTranslator {
     async fn translate(&self, text: &str) -> anyhow::Result<String> {
         debug!("使用 DeepSeek 进行翻译，API Endpoint: {}", self.endpoint);
         let client = reqwest::Client::builder()
-            .timeout(std::time::Duration::from_secs(10))
+            .timeout(std::time::Duration::from_secs(self.timeout_seconds))
             .build()?;
 
         let url = format!("{}/chat/completions", self.endpoint);
@@ -271,7 +291,7 @@ impl Translator for OpenAITranslator {
     async fn translate(&self, text: &str) -> anyhow::Result<String> {
         debug!("使用 OpenAI 进行翻译，API Endpoint: {}", self.endpoint);
         let client = reqwest::Client::builder()
-            .timeout(std::time::Duration::from_secs(10))
+            .timeout(std::time::Duration::from_secs(self.timeout_seconds))
             .build()?;
 
         let url = format!("{}/chat/completions", self.endpoint);
@@ -337,7 +357,7 @@ impl Translator for ClaudeTranslator {
     async fn translate(&self, text: &str) -> anyhow::Result<String> {
         debug!("使用 Claude 进行翻译，API Endpoint: {}", self.endpoint);
         let client = reqwest::Client::builder()
-            .timeout(std::time::Duration::from_secs(10))
+            .timeout(std::time::Duration::from_secs(self.timeout_seconds))
             .build()?;
 
         let url = format!("{}/messages", self.endpoint);
@@ -426,7 +446,7 @@ impl Translator for GeminiTranslator {
     async fn translate(&self, text: &str) -> anyhow::Result<String> {
         debug!("使用 Gemini 进行翻译，API Endpoint: {}", self.endpoint);
         let client = reqwest::Client::builder()
-            .timeout(std::time::Duration::from_secs(10))
+            .timeout(std::time::Duration::from_secs(self.timeout_seconds))
             .build()?;
 
         let url = format!("{}/models/{}:generateContent", self.endpoint, self.model);
@@ -486,7 +506,7 @@ impl Translator for GrokTranslator {
     async fn translate(&self, text: &str) -> anyhow::Result<String> {
         debug!("使用 Grok 进行翻译，API Endpoint: {}", self.endpoint);
         let client = reqwest::Client::builder()
-            .timeout(std::time::Duration::from_secs(10))
+            .timeout(std::time::Duration::from_secs(self.timeout_seconds))
             .build()?;
 
         let url = format!("{}/chat/completions", self.endpoint);
@@ -635,18 +655,42 @@ fn select_retry_service(config: &Config, tried_services: &[AIService]) -> anyhow
     Ok(Some(available_services[selection].service.clone()))
 }
 
-pub async fn create_translator_for_service(config: &AIServiceConfig) -> anyhow::Result<Box<dyn Translator>> {
-    Ok(match config.service {
-        AIService::DeepSeek => Box::new(DeepSeekTranslator::new(config)),
-        AIService::OpenAI => Box::new(OpenAITranslator::new(config)),
-        AIService::Claude => Box::new(ClaudeTranslator::new(config)),
+pub async fn create_translator_for_service(service_config: &AIServiceConfig) -> anyhow::Result<Box<dyn Translator>> {
+    // 获取全局配置中的超时时间
+    let config = crate::config::Config::load().ok();
+    let timeout = config.as_ref().map(|c| c.timeout_seconds).unwrap_or(20);
+
+    Ok(match service_config.service {
+        AIService::DeepSeek => {
+            let mut translator = DeepSeekTranslator::new(service_config);
+            translator.timeout_seconds = timeout;
+            Box::new(translator)
+        },
+        AIService::OpenAI => {
+            let mut translator = OpenAITranslator::new(service_config);
+            translator.timeout_seconds = timeout;
+            Box::new(translator)
+        },
+        AIService::Claude => {
+            let mut translator = ClaudeTranslator::new(service_config);
+            translator.timeout_seconds = timeout;
+            Box::new(translator)
+        },
         AIService::Copilot => {
             let editor_version = "1.0.0".to_string();
-            let client = CopilotClient::new_with_models(config.api_key.clone(), editor_version).await?;
-            let model_id = config.model.clone().unwrap_or_else(|| "copilot-chat".to_string());
+            let client = CopilotClient::new_with_models(service_config.api_key.clone(), editor_version).await?;
+            let model_id = service_config.model.clone().unwrap_or_else(|| "copilot-chat".to_string());
             Box::new(CopilotTranslator::new(client, model_id))
         },
-        AIService::Gemini => Box::new(GeminiTranslator::new(config)),
-        AIService::Grok => Box::new(GrokTranslator::new(config)),
+        AIService::Gemini => {
+            let mut translator = GeminiTranslator::new(service_config);
+            translator.timeout_seconds = timeout;
+            Box::new(translator)
+        },
+        AIService::Grok => {
+            let mut translator = GrokTranslator::new(service_config);
+            translator.timeout_seconds = timeout;
+            Box::new(translator)
+        },
     })
 }

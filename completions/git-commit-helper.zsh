@@ -48,6 +48,7 @@ _git-commit-helper() {
                         'edit[修改已有的 AI 服务配置]' \
                         'remove[删除 AI 服务]' \
                         'set-default[设置默认 AI 服务]' \
+                        'set-timeout[设置网络请求超时时间]' \
                         'list[列出所有AI服务]' \
                         'test[测试指定的AI服务]'
 
@@ -56,6 +57,11 @@ _git-commit-helper() {
                             _arguments \
                                 '-t[测试用的中文文本]' \
                                 '--text[测试用的中文文本]'
+                            ;;
+                        set-timeout)
+                            _arguments \
+                                '-s[超时时间（单位：秒）]' \
+                                '--seconds[超时时间（单位：秒）]'
                             ;;
                     esac
                     ;;

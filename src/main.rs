@@ -116,6 +116,12 @@ enum ServiceCommands {
         #[arg(short, long, default_value = "这是一个测试消息。")]
         text: String,
     },
+    /// 设置网络请求超时时间（单位：秒）
+    SetTimeout {
+        /// 超时时间，单位为秒
+        #[arg(short, long)]
+        seconds: u64,
+    },
 }
 
 #[tokio::main]
@@ -220,6 +226,12 @@ async fn main() -> Result<()> {
                 ServiceCommands::Edit => config.edit_service().await,
                 ServiceCommands::Remove => config.remove_service().await,
                 ServiceCommands::SetDefault => config.set_default_service().await,
+                ServiceCommands::SetTimeout { seconds } => {
+                    config.timeout_seconds = seconds;
+                    config.save()?;
+                    println!("已将网络请求超时时间设置为 {} 秒", seconds);
+                    Ok(())
+                }
                 ServiceCommands::List => {
                     let config = config::Config::load()?;
                     println!("已配置的 AI 服务列表:");
