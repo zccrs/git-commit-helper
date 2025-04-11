@@ -27,6 +27,7 @@ pub async fn generate_commit_message(commit_type: Option<String>, message: Optio
     let prompt = match message {
         Some(msg) => format!(
             "我将给你展示一些 git diff 的内容和用户的描述，请你帮我生成一个符合规范的 git commit 信息。\
+            请使用纯文本格式，不要使用任何 markdown 或其他标记语言。\
             用户描述的内容是这次改动的重点，git diff 作为辅助参考。\
             提交信息的格式要求：\
             1. 第一行为标题，简要说明改动内容\
@@ -41,11 +42,13 @@ pub async fn generate_commit_message(commit_type: Option<String>, message: Optio
                refactor: 代码重构\
                test: 测试相关\
                chore: 构建或辅助工具变更\
+            注意：仅返回纯文本格式的提交信息，不要包含任何格式标记。\
             \n\n用户的描述：\n{}\n\n改动内容：\n{}",
             msg, diff
         ),
         None => format!(
             "我将给你展示一些 git diff 的内容，请你帮我总结这些改动并生成一个符合规范的 git commit 信息。\
+            请使用纯文本格式，不要使用任何 markdown 或其他标记语言。\
             提交信息的格式要求：\
             1. 第一行为标题，简要说明改动内容\
             2. 标题要精简，不超过50个字符\
@@ -59,6 +62,7 @@ pub async fn generate_commit_message(commit_type: Option<String>, message: Optio
                refactor: 代码重构\
                test: 测试相关\
                chore: 构建或辅助工具变更\
+            注意：仅返回纯文本格式的提交信息，不要包含任何格式标记。\
             \n\n以下是改动内容：\n{}",
             diff
         )
