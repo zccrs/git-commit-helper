@@ -2,8 +2,7 @@ use crate::config;
 use crate::git;
 use crate::translator::ai_service;
 use crate::review;
-use anyhow::Result;
-use dialoguer::{Confirm};
+use dialoguer::Confirm;
 use log::{debug, info};
 use std::process::Command;
 
@@ -12,7 +11,8 @@ pub async fn generate_commit_message(
     message: Option<String>,
     auto_add: bool,
     no_review: bool,
-) -> Result<()> {
+    no_translate: bool,
+) -> anyhow::Result<()> {
     // 如果指定了 -a 参数，先执行 git add -u
     if auto_add {
         info!("自动添加已修改的文件...");
@@ -23,6 +23,11 @@ pub async fn generate_commit_message(
         if !status.success() {
             return Err(anyhow::anyhow!("执行 git add -u 命令失败"));
         }
+    }
+
+    // 设置不翻译的环境变量
+    if no_translate {
+        std::env::set_var("GIT_COMMIT_HELPER_NO_TRANSLATE", "1");
     }
 
     let diff = get_staged_diff()?;
@@ -143,6 +148,7 @@ pub async fn generate_commit_message(
 
     // 清理环境变量（无论命令是否执行成功）
     std::env::remove_var("GIT_COMMIT_HELPER_SKIP_REVIEW");
+    std::env::remove_var("GIT_COMMIT_HELPER_NO_TRANSLATE");
 
     if !status.success() {
         return Err(anyhow::anyhow!("git commit 命令执行失败"));
@@ -182,7 +188,7 @@ pub async fn generate_commit_suggestion(commit_types: &[String], user_descriptio
     Ok(message)
 }
 
-fn get_staged_diff() -> Result<String> {
+fn get_staged_diff() -> anyhow::Result<String> {
     let output = Command::new("git")
         .args(["diff", "--cached", "--no-prefix"])
         .output()?;

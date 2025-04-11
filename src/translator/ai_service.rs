@@ -146,11 +146,9 @@ fn get_translation_prompt(text: &str) -> String {
             6. Type must be one of: feat/fix/docs/style/refactor/test/chore
             7. Focus on both WHAT changed and WHY it was necessary
             8. Include any important technical details or context
-            9. Prefix the entire message with '[NO_TRANSLATE]' to prevent re-translation
-            10. DO NOT wrap the response in any markdown, code block markers like
+            9. DO NOT wrap the response in any markdown or code block markers
 
             Example response format:
-            [NO_TRANSLATE]
             feat: add user authentication module
 
             - Implement JWT-based authentication system
@@ -189,15 +187,6 @@ fn get_translation_prompt(text: &str) -> String {
 }
 
 fn extract_translation(response: &str) -> String {
-    // 处理带有 NO_TRANSLATE 标记的内容
-    if response.trim().starts_with("[NO_TRANSLATE]") {
-        return response.trim()
-            .strip_prefix("[NO_TRANSLATE]")
-            .unwrap_or(response)
-            .trim()
-            .to_string();
-    }
-
     // 查找最后一个 "English translation:" 后的内容
     if let Some(idx) = response.rfind("English translation:") {
         let translation = response[idx..].lines()
@@ -484,8 +473,8 @@ pub async fn create_translator(config: &Config) -> anyhow::Result<Box<dyn Transl
 pub async fn translate_with_fallback(config: &Config, text: &str) -> anyhow::Result<String> {
     let mut tried_services = Vec::new();
 
-    // 如果内容已经是双语的（带有 NO_TRANSLATE 标记），则直接返回
-    if text.trim().starts_with("[NO_TRANSLATE]") {
+    // 如果已设置环境变量，直接返回原文
+    if std::env::var("GIT_COMMIT_HELPER_NO_TRANSLATE").is_ok() {
         return Ok(text.trim().to_string());
     }
 

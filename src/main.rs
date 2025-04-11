@@ -1,8 +1,8 @@
 use anyhow::Result;
 use clap::{Parser, Subcommand};
 use dialoguer::{Confirm, Select, Input};
-use log::{debug};  // 移除未使用的 info
-use std::path::{PathBuf};
+use log::debug;  // 移除未使用的 info
+use std::path::PathBuf;
 use crate::config::AIService;
 
 mod config;
@@ -76,6 +76,10 @@ enum Commands {
         /// 自动添加所有已修改但未暂存的文件
         #[arg(short, long)]
         all: bool,
+
+        /// 不翻译提交信息
+        #[arg(long)]
+        no_translate: bool,
     },
     /// 管理 AI 代码审查功能
     #[command(name = "ai-review")]
@@ -317,8 +321,8 @@ async fn main() -> Result<()> {
                 Err(e) => Err(e)
             }
         }
-        Some(Commands::Commit { r#type, message, all }) => {
-            commit::generate_commit_message(r#type, message, all, cli.no_review).await
+        Some(Commands::Commit { r#type, message, all, no_translate }) => {
+            commit::generate_commit_message(r#type, message, all, cli.no_review, no_translate).await
         }
         Some(Commands::AIReview { enable, disable, status }) => {
             let mut config = config::Config::load()?;
