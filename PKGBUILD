@@ -14,7 +14,15 @@ sha256sums=()
 
 pkgver() {
     cd "$startdir"
-    printf "0.1.0.r%s" "$(git rev-list --count HEAD)"
+    # 尝试获取最新的 git tag 版本号（去除 v 前缀）
+    local tag_ver=$(git describe --tags --abbrev=0 2>/dev/null | sed 's/^v//' || echo "")
+    if [ -n "$tag_ver" ]; then
+        # 如果存在 tag，直接使用 tag 版本号
+        printf "%s" "$tag_ver"
+    else
+        # 如果没有 tag，则使用 0.1.0.r{commit_count} 格式
+        printf "$pkgver.r%s" "$(git rev-list --count HEAD)"
+    fi
 }
 
 prepare() {
