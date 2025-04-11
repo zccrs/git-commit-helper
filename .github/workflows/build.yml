@@ -7,10 +7,17 @@ on:
   pull_request:
     branches: [ master ]
 
+permissions:
+  contents: read
+  packages: write
+
 jobs:
   build-arch:
     runs-on: ubuntu-latest
     container: archlinux:base-devel
+    permissions:
+      contents: read
+      packages: write
     steps:
       - uses: actions/checkout@v4
       - name: Install dependencies
@@ -31,6 +38,9 @@ jobs:
   build-deb:
     runs-on: ubuntu-latest
     container: debian:stable
+    permissions:
+      contents: read
+      packages: write
     steps:
       - uses: actions/checkout@v4
       - name: Install dependencies
@@ -51,6 +61,9 @@ jobs:
   build-rpm:
     runs-on: ubuntu-latest
     container: fedora:latest
+    permissions:
+      contents: read
+      packages: write
     steps:
       - uses: actions/checkout@v4
       - name: Install dependencies
@@ -69,6 +82,8 @@ jobs:
           path: ~/rpmbuild/RPMS/x86_64/*.rpm
 
   create-release:
+    permissions:
+      contents: write
     needs: [build-arch, build-deb, build-rpm]
     runs-on: ubuntu-latest
     if: startsWith(github.ref, 'refs/tags/')
