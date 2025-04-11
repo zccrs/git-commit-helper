@@ -85,8 +85,14 @@ fn create_hook_content(binary_path: &Path, use_backup: bool, run_before: Option<
     if !use_backup {
         return Ok(format!(
             r#"#!/bin/sh
-exec "{}" "$1"
+# 检查是否在命令行中使用了 --no-review 选项
+if git config --bool git-commit-helper.disable-review >/dev/null 2>&1; then
+    exec "{}" --no-review "$1"
+else
+    exec "{}" "$1"
+fi
 "#,
+            binary_path.display(),
             binary_path.display()
         ));
     }
@@ -97,14 +103,21 @@ exec "{}" "$1"
     match run_before {
         Some(true) => Ok(format!(
             r#"#!/bin/sh
-# 先运行当前程序，如果失败则中止
-"{}" "$1" || exit $?
+# 检查是否在命令行中使用了 --no-review 选项
+if git config --bool git-commit-helper.disable-review >/dev/null 2>&1; then
+    # 先运行当前程序，如果失败则中止
+    "{}" --no-review "$1" || exit $?
+else
+    # 先运行当前程序，如果失败则中止
+    "{}" "$1" || exit $?
+fi
 
 # 如果存在旧的 hook，则运行它
 if [ -x "{}" ]; then
     exec "{}" "$1"
 fi
 "#,
+            binary_path.display(),
             binary_path.display(),
             backup_path.display(),
             backup_path.display()
@@ -116,11 +129,18 @@ if [ -x "{}" ]; then
     "{}" "$1" || exit $?
 fi
 
-# 运行当前程序
-exec "{}" "$1"
+# 检查是否在命令行中使用了 --no-review 选项
+if git config --bool git-commit-helper.disable-review >/dev/null 2>&1; then
+    # 运行当前程序
+    exec "{}" --no-review "$1"
+else
+    # 运行当前程序
+    exec "{}" "$1"
+fi
 "#,
             backup_path.display(),
             backup_path.display(),
+            binary_path.display(),
             binary_path.display()
         )),
         None => unreachable!("使用备份时必须指定运行顺序"),

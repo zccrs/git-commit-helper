@@ -14,6 +14,13 @@ use crate::translator::ai_service;
 pub struct Config {
     pub default_service: AIService,
     pub services: Vec<AIServiceConfig>,
+    #[serde(default = "default_ai_review")]
+    pub ai_review: bool,  // 添加 AI Review 开关
+}
+
+// 添加默认值函数
+fn default_ai_review() -> bool {
+    true
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -39,6 +46,7 @@ impl Config {
         Self {
             default_service: AIService::OpenAI, // Changed from ChatGPT
             services: Vec::new(),
+            ai_review: true,  // 默认开启
         }
     }
 
@@ -176,6 +184,7 @@ impl Config {
         let mut config = Config {
             default_service: services[default_index - 1].service.clone(),
             services,
+            ai_review: true,  // 默认开启
         };
 
         // 确保配置目录存在
@@ -659,7 +668,7 @@ impl Config {
         Ok(&self.services[0])
     }
 
-    fn save(&self) -> Result<()> {
+    pub fn save(&self) -> Result<()> {
         let config_path = Self::config_path()?;
         if let Some(parent) = config_path.parent() {
             fs::create_dir_all(parent)?;

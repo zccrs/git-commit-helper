@@ -2,7 +2,7 @@ use anyhow::Result;
 use clap::{Parser, Subcommand};
 use dialoguer::{Confirm, Select, Input};
 use log::debug;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use crate::config::AIService;
 
 mod config;
@@ -10,15 +10,21 @@ mod git;
 mod translator;
 mod install;
 mod commit;
+mod review;
 
 #[derive(Parser)]
-#[command(author, version, about, long_about = None)]
+#[command(name = "git-commit-helper")]
+#[command(author, version, about = "Git commit message helper", long_about = None)]
 struct Cli {
     #[command(subcommand)]
     command: Option<Commands>,
 
     #[arg(help = "Git commit message file path")]
     commit_msg_file: Option<PathBuf>,
+
+    /// 禁用代码审查功能
+    #[arg(long, global = true)]
+    no_review: bool,
 }
 
 #[derive(Subcommand, PartialEq)]
@@ -70,6 +76,21 @@ enum Commands {
         /// 自动添加所有已修改但未暂存的文件
         #[arg(short, long)]
         all: bool,
+    },
+    /// 管理 AI 代码审查功能
+    #[command(name = "ai-review")]
+    AIReview {
+        /// 启用 AI 代码审查
+        #[arg(long, group = "review_action")]
+        enable: bool,
+
+        /// 禁用 AI 代码审查
+        #[arg(long, group = "review_action")]
+        disable: bool,
+
+        /// 显示当前 AI 代码审查状态
+        #[arg(long, group = "review_action")]
+        status: bool,
     },
 }
 
@@ -299,11 +320,44 @@ async fn main() -> Result<()> {
         Some(Commands::Commit { r#type, message, all }) => {
             commit::generate_commit_message(r#type, message, all).await
         }
+        Some(Commands::AIReview { enable, disable, status }) => {
+            let mut config = config::Config::load()?;
+
+            if status {
+                println!("AI 代码审查功能当前状态: {}",
+                    if config.ai_review { "已启用" } else { "已禁用" });
+                return Ok(());
+            }
+
+            if enable {
+                config.ai_review = true;
+                config.save()?;
+                println!("已启用 AI 代码审查功能");
+            } else if disable {
+                config.ai_review = false;
+                config.save()?;
+                println!("已禁用 AI 代码审查功能");
+            }
+
+            Ok(())
+        }
         None => {
             let commit_msg_path = cli.commit_msg_file.ok_or_else(|| {
                 anyhow::anyhow!("Missing commit message file path")
             })?;
-            git::process_commit_msg(&commit_msg_path).await
+            let no_review = cli.no_review;
+            git::process_commit_msg(&commit_msg_path, no_review).await
         }
     }
+}
+
+async fn process_commit_msg(args: &[String]) -> Result<()> {
+    if args.len() != 2 {
+        return Err(anyhow::anyhow!("参数数量不正确"));
+    }
+
+    let no_review = args.iter().any(|arg| arg == "--no-review");
+    let commit_msg_file = Path::new(&args[1]);
+    git::process_commit_msg(commit_msg_file, no_review).await?;
+    Ok(())
 }

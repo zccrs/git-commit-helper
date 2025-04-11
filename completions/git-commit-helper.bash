@@ -26,6 +26,9 @@ _git_commit_helper() {
             git_commit_helper,translate)
                 cmd="git_commit_helper__translate"
                 ;;
+            git_commit_helper,ai-review)
+                cmd="git_commit_helper__ai_review"
+                ;;
             git_commit_helper__service,add)
                 cmd="git_commit_helper__service__add"
                 ;;
@@ -51,7 +54,7 @@ _git_commit_helper() {
 
     case "${cmd}" in
         git_commit_helper)
-            opts="config show install service translate commit help"
+            opts="config show install service translate commit ai-review help"
             if [[ ${cur} == -* ]] ; then
                 opts="--help -h --version -V"
             fi
@@ -115,6 +118,14 @@ _git_commit_helper() {
                     opts="$opts -a --all"
                     ;;
             esac
+            ;;
+        git_commit_helper__ai_review)
+            opts=""
+            if [[ ${cur} == -* ]] ; then
+                opts="--enable --disable --status"
+            fi
+            COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
+            return 0
             ;;
     esac
 }
