@@ -28,7 +28,7 @@ _git-commit-helper() {
                 'config[配置 AI 服务]' \
                 'show[显示当前配置信息]' \
                 'install[将工具安装到当前 git 仓库]' \
-                'service[管理 AI 服务配置]' \
+                'ai[管理 AI 服务配置]' \
                 'translate[翻译中文内容为英文]' \
                 'commit[生成提交信息]' \
                 'ai-review[管理 AI 代码审查功能]'
@@ -42,8 +42,8 @@ _git-commit-helper() {
                         '-f[强制安装]' \
                         '--force[强制安装]'
                     ;;
-                service)
-                    _values 'service 命令' \
+                ai)
+                    _values 'ai 命令' \
                         'add[添加新的 AI 服务]' \
                         'edit[修改已有的 AI 服务配置]' \
                         'remove[删除 AI 服务]' \

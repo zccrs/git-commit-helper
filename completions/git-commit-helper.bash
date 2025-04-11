@@ -20,8 +20,8 @@ _git_commit_helper() {
             git_commit_helper,install)
                 cmd="git_commit_helper__install"
                 ;;
-            git_commit_helper,service)
-                cmd="git_commit_helper__service"
+            git_commit_helper,ai)
+                cmd="git_commit_helper__ai"
                 ;;
             git_commit_helper,translate)
                 cmd="git_commit_helper__translate"
@@ -29,26 +29,26 @@ _git_commit_helper() {
             git_commit_helper,ai-review)
                 cmd="git_commit_helper__ai_review"
                 ;;
-            git_commit_helper__service,add)
-                cmd="git_commit_helper__service__add"
+            git_commit_helper__ai,add)
+                cmd="git_commit_helper__ai__add"
                 ;;
-            git_commit_helper__service,edit)
-                cmd="git_commit_helper__service__edit"
+            git_commit_helper__ai,edit)
+                cmd="git_commit_helper__ai__edit"
                 ;;
-            git_commit_helper__service,remove)
-                cmd="git_commit_helper__service__remove"
+            git_commit_helper__ai,remove)
+                cmd="git_commit_helper__ai__remove"
                 ;;
-            git_commit_helper__service,set-default)
-                cmd="git_commit_helper__service__set_default"
+            git_commit_helper__ai,set-default)
+                cmd="git_commit_helper__ai__set_default"
                 ;;
-            git_commit_helper__service,set-timeout)
-                cmd="git_commit_helper__service__set_timeout"
+            git_commit_helper__ai,set-timeout)
+                cmd="git_commit_helper__ai__set_timeout"
                 ;;
-            git_commit_helper__service,list)
-                cmd="git_commit_helper__service__list"
+            git_commit_helper__ai,list)
+                cmd="git_commit_helper__ai__list"
                 ;;
-            git_commit_helper__service,test)
-                cmd="git_commit_helper__service__test"
+            git_commit_helper__ai,test)
+                cmd="git_commit_helper__ai__test"
                 ;;
             *)
                 ;;
@@ -80,16 +80,16 @@ _git_commit_helper() {
             COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
             return 0
             ;;
-        git_commit_helper__service)
+        git_commit_helper__ai)
             opts="add edit remove set-default set-timeout list test help"
             COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
             return 0
             ;;
-        git_commit_helper__service__list)
+        git_commit_helper__ai__list)
             COMPREPLY=( $(compgen -W "" -- "${cur}") )
             return 0
             ;;
-        git_commit_helper__service__test)
+        git_commit_helper__ai__test)
             opts=""
             if [[ ${cur} == -* ]] ; then
                 opts="--text -t"
@@ -97,7 +97,7 @@ _git_commit_helper() {
             COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
             return 0
             ;;
-        git_commit_helper__service__set_timeout)
+        git_commit_helper__ai__set_timeout)
             opts=""
             if [[ ${cur} == -* ]] ; then
                 opts="--seconds -s"
