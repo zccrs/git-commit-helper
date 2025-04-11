@@ -142,6 +142,7 @@ jobs:
           token: "${{ secrets.GITHUB_TOKEN }}"
           prerelease: true
           name: "Development Build"
+          tag_name: "pre-release-${{ github.run_id }}"
           files: |
             arch-package/*.pkg.tar.zst
             debian-package/pool/*.deb
