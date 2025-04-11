@@ -171,17 +171,17 @@ fn get_translation_prompt(text: &str) -> String {
             Example response format:
             feat: add user authentication module
 
-            - Implement JWT-based authentication system
-            - Add user login and registration endpoints
-            - Include password hashing with bcrypt
-            - Set up token refresh mechanism
+            1. Implement JWT-based authentication system
+            2. Add user login and registration endpoints
+            3. Include password hashing with bcrypt
+            4. Set up token refresh mechanism
 
             feat: 添加用户认证模块
 
-            - 实现基于 JWT 的认证系统
-            - 添加用户登录和注册端点
-            - 包含使用 bcrypt 的密码哈希处理
-            - 设置令牌刷新机制
+            1. 实现基于 JWT 的认证系统
+            2. 添加用户登录和注册端点
+            3. 包含使用 bcrypt 的密码哈希处理
+            4. 设置令牌刷新机制
 
             Please respond with ONLY the commit message following this format,
             DO NOT end commit titles with any punctuation.");
