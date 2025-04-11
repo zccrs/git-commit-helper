@@ -1,3 +1,11 @@
+git-commit-helper (0.3.1) unstable; urgency=medium
+
+  * fix: correct formatting in comments for clarity
+  * fix: optimize Arch Linux package version fetching
+  * fix: correct Arch Linux package version error
+
+ -- zccrs <zhangjide@deepin.org>  Fri, 11 Apr 2025 00:00:00 +0800
+
 git-commit-helper (0.3.0-1) unstable; urgency=medium
 
   * Release version 0.3.0
