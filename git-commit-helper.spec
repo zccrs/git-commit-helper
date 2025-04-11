@@ -14,7 +14,7 @@ Requires:       git
 一个帮助规范 git commit message 的命令行工具
 
 %prep
-%autosetup
+%setup -q
 
 %build
 cargo build --release
@@ -25,6 +25,11 @@ install -Dm644 completions/git-commit-helper.bash %{buildroot}%{_datadir}/bash-c
 install -Dm644 completions/git-commit-helper.zsh %{buildroot}%{_datadir}/zsh/site-functions/_git-commit-helper
 
 %files
+%license LICENSE
 %{_bindir}/git-commit-helper
 %{_datadir}/bash-completion/completions/git-commit-helper
 %{_datadir}/zsh/site-functions/_git-commit-helper
+
+%changelog
+* Fri Apr 11 2025 zccrs <zccrs@live.com> - 0.1.0-1
+- Initial package
