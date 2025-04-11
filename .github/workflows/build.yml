@@ -90,7 +90,8 @@ jobs:
         run: |
           mkdir -p ~/rpmbuild/{SOURCES,SPECS}
           cp git-commit-helper.spec ~/rpmbuild/SPECS/
-          tar --transform 's,^,git-commit-helper-0.1.0/,' -czf ~/rpmbuild/SOURCES/git-commit-helper-0.1.0.tar.gz *
+          VERSION=$(grep '^Version:' git-commit-helper.spec | awk '{print $2}')
+          tar --transform "s,^,git-commit-helper-$VERSION/," -czf ~/rpmbuild/SOURCES/git-commit-helper-$VERSION.tar.gz *
           rpmbuild -ba ~/rpmbuild/SPECS/git-commit-helper.spec
       - name: Upload RPM Package
         uses: actions/upload-artifact@v4
