@@ -44,12 +44,9 @@ jobs:
       - name: Install dependencies
         run: |
           apt-get update
-          apt-get install -y curl build-essential git debhelper pkg-config libssl-dev
-          curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- --default-toolchain stable -y
-          . $HOME/.cargo/env
+          apt-get install -y curl build-essential git debhelper pkg-config libssl-dev cargo rustc
       - name: Build package
         run: |
-          . $HOME/.cargo/env
           dpkg-buildpackage -us -uc
       - name: Upload Debian Package
         uses: actions/upload-artifact@v4
