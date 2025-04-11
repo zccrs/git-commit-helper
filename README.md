@@ -61,6 +61,21 @@ sudo apt install git-commit-helper
 sudo dnf install git-commit-helper
 ```
 
+### Debian/Ubuntu
+
+添加软件源：
+```bash
+# 添加GPG公钥（暂未实现）
+# curl -fsSL https://zccrs.github.io/git-commit-helper/KEY.gpg | sudo gpg --dearmor -o /usr/share/keyrings/git-commit-helper.gpg
+
+# 添加软件源
+echo "deb [trusted=yes] https://zccrs.github.io/git-commit-helper/ stable main" | sudo tee /etc/apt/sources.list.d/git-commit-helper.list
+
+# 更新软件源并安装
+sudo apt update
+sudo apt install git-commit-helper
+```
+
 ## 🚀 快速开始
 
 1. 配置 AI 服务
