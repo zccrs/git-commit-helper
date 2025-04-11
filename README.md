@@ -128,9 +128,14 @@ a line exceeds the recommended value of git.
 | config | 配置 AI 服务 | `git-commit-helper config` |
 | show | 显示当前配置 | `git-commit-helper show` |
 | install | 安装 Git Hook | `git-commit-helper install [-f]` |
-| test | 测试翻译功能 | `git-commit-helper test -t "测试文本"` |
-| commit | 生成提交信息 | `git-commit-helper commit [-t feat] [-a]` |
-| service | 管理 AI 服务 | `git-commit-helper service add` |
+| service add | 添加 AI 服务 | `git-commit-helper service add` |
+| service edit | 编辑 AI 服务配置 | `git-commit-helper service edit` |
+| service remove | 删除 AI 服务 | `git-commit-helper service remove` |
+| service set-default | 设置默认服务 | `git-commit-helper service set-default` |
+| service list | 列出所有服务 | `git-commit-helper service list` |
+| service test | 测试指定服务 | `git-commit-helper service test [-t "测试文本"]` |
+| translate | 翻译内容 | `git-commit-helper translate [-f 文件] [-t 文本]` |
+| commit | 生成提交信息 | `git-commit-helper commit [-t 类型] [-m 描述] [-a]` |
 
 ### 提交类型
 

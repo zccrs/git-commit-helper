@@ -29,8 +29,6 @@ _git-commit-helper() {
                 'show[显示当前配置信息]' \
                 'install[将工具安装到当前 git 仓库]' \
                 'service[管理 AI 服务配置]' \
-                'list[列出所有AI服务]' \
-                'test[测试翻译功能]' \
                 'translate[翻译中文内容为英文]' \
                 'commit[生成提交信息]'
             ;;
@@ -48,12 +46,17 @@ _git-commit-helper() {
                         'add[添加新的 AI 服务]' \
                         'edit[修改已有的 AI 服务配置]' \
                         'remove[删除 AI 服务]' \
-                        'set-default[设置默认 AI 服务]'
-                    ;;
-                test)
-                    _arguments \
-                        '-t[测试用的中文文本]' \
-                        '--text[测试用的中文文本]'
+                        'set-default[设置默认 AI 服务]' \
+                        'list[列出所有AI服务]' \
+                        'test[测试指定的AI服务]'
+
+                    case $line[2] in
+                        test)
+                            _arguments \
+                                '-t[测试用的中文文本]' \
+                                '--text[测试用的中文文本]'
+                            ;;
+                    esac
                     ;;
                 translate)
                     _arguments \
@@ -64,9 +67,12 @@ _git-commit-helper() {
                     ;;
                 commit)
                     _arguments \
-                        {-t,--type}'[指定提交类型]:type:(feat fix docs style refactor test chore)' \
-                        {-m,--message}'[提供对改动的描述]:message:_files' \
-                        {-a,--all}'[自动添加所有已修改但未暂存的文件]'
+                        '-t[提交消息的类型]' \
+                        '--type[提交消息的类型]' \
+                        '-m[用户对改动的描述]' \
+                        '--message[用户对改动的描述]' \
+                        '-a[自动添加所有已修改但未暂存的文件]' \
+                        '--all[自动添加所有已修改但未暂存的文件]'
                     ;;
             esac
             ;;

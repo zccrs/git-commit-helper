@@ -42,14 +42,6 @@ enum Commands {
         #[command(subcommand)]
         command: ServiceCommands,
     },
-    /// 列出所有AI服务
-    List,
-    /// 测试指定的AI服务
-    Test {
-        /// 测试用的中文文本,
-        #[arg(short, long, default_value = "这是一个测试消息。")]
-        text: String,
-    },
     /// 翻译中文内容为英文
     Translate {
         /// 要翻译的文件路径
@@ -87,6 +79,14 @@ enum ServiceCommands {
     Remove,
     /// 设置默认 AI 服务
     SetDefault,
+    /// 列出所有AI服务
+    List,
+    /// 测试指定的AI服务
+    Test {
+        /// 测试用的中文文本
+        #[arg(short, long, default_value = "这是一个测试消息。")]
+        text: String,
+    },
 }
 
 #[tokio::main]
@@ -186,74 +186,73 @@ async fn main() -> Result<()> {
                             _ => unreachable!(),
                         }
                     };
-                    config.add_service(selected_service).await?;
+                    config.add_service(selected_service).await
                 }
-                ServiceCommands::Edit => config.edit_service().await?,
-                ServiceCommands::Remove => config.remove_service().await?,
-                ServiceCommands::SetDefault => config.set_default_service().await?,
-            }
-            Ok(())
-        }
-        Some(Commands::List) => {
-            let config = config::Config::load()?;
-            println!("已配置的 AI 服务列表:");
-            for (i, service) in config.services.iter().enumerate() {
-                println!("[{}] {:?}{}", 
-                    i + 1, 
-                    service.service,
-                    if service.service == config.default_service { " (默认)" } else { "" }
-                );
-            }
-            Ok(())
-        }
-        Some(Commands::Test { text }) => {
-            let config = config::Config::load()?;
-            if config.services.is_empty() {
-                return Err(anyhow::anyhow!("没有配置任何 AI 服务，请先添加服务"));
-            }
-
-            let service_names: Vec<String> = config.services
-                .iter()
-                .enumerate()
-                .map(|(i, s)| format!("[{}] {:?}{}", 
-                    i + 1, 
-                    s.service,
-                    if s.service == config.default_service { " (默认)" } else { "" }
-                ))
-                .collect();
-
-            let selection = Select::new()
-                .with_prompt("请选择要测试的 AI 服务")
-                .items(&service_names)
-                .default(0)
-                .interact()?;
-
-            let service = &config.services[selection];
-            println!("正在测试 {:?} 服务...", service.service);
-            
-            let translator = translator::ai_service::create_translator_for_service(service).await?;
-            debug!("开始发送翻译请求");
-            match translator.translate(&text).await {
-                Ok(result) => {
-                    debug!("收到翻译响应");
-                    println!("\n测试结果:");
-                    println!("原文: {}", text);
-                    if result.is_empty() {
-                        println!("警告: 收到空的翻译结果！");
+                ServiceCommands::Edit => config.edit_service().await,
+                ServiceCommands::Remove => config.remove_service().await,
+                ServiceCommands::SetDefault => config.set_default_service().await,
+                ServiceCommands::List => {
+                    let config = config::Config::load()?;
+                    println!("已配置的 AI 服务列表:");
+                    for (i, service) in config.services.iter().enumerate() {
+                        println!("[{}] {:?}{}", 
+                            i + 1, 
+                            service.service,
+                            if service.service == config.default_service { " (默认)" } else { "" }
+                        );
                     }
-                    println!("译文: {}", result);
-                    println!("\n测试成功！");
                     Ok(())
                 }
-                Err(e) => {
-                    println!("\n测试失败！错误信息:");
-                    println!("{}", e);
-                    println!("\n请检查:");
-                    println!("1. API Key 是否正确");
-                    println!("2. API Endpoint 是否可访问");
-                    println!("3. 网络连接是否正常");
-                    println!("4. 查看日志获取详细信息（设置 RUST_LOG=debug）");
-                    Err(e)
+                ServiceCommands::Test { text } => {
+                    let config = config::Config::load()?;
+                    if config.services.is_empty() {
+                        return Err(anyhow::anyhow!("没有配置任何 AI 服务，请先添加服务"));
+                    }
+
+                    let service_names: Vec<String> = config.services
+                        .iter()
+                        .enumerate()
+                        .map(|(i, s)| format!("[{}] {:?}{}", 
+                            i + 1, 
+                            s.service,
+                            if s.service == config.default_service { " (默认)" } else { "" }
+                        ))
+                        .collect();
+
+                    let selection = Select::new()
+                        .with_prompt("请选择要测试的 AI 服务")
+                        .items(&service_names)
+                        .default(0)
+                        .interact()?;
+
+                    let service = &config.services[selection];
+                    println!("正在测试 {:?} 服务...", service.service);
+                    
+                    let translator = translator::ai_service::create_translator_for_service(service).await?;
+                    debug!("开始发送翻译请求");
+                    match translator.translate(&text).await {
+                        Ok(result) => {
+                            debug!("收到翻译响应");
+                            println!("\n测试结果:");
+                            println!("原文: {}", text);
+                            if result.is_empty() {
+                                println!("警告: 收到空的翻译结果！");
+                            }
+                            println!("译文: {}", result);
+                            println!("\n测试成功！");
+                            Ok(())
+                        }
+                        Err(e) => {
+                            println!("\n测试失败！错误信息:");
+                            println!("{}", e);
+                            println!("\n请检查:");
+                            println!("1. API Key 是否正确");
+                            println!("2. API Endpoint 是否可访问");
+                            println!("3. 网络连接是否正常");
+                            println!("4. 查看日志获取详细信息（设置 RUST_LOG=debug）");
+                            Err(e)
+                        }
+                    }
                 }
             }
         }

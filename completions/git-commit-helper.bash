@@ -23,17 +23,8 @@ _git_commit_helper() {
             git_commit_helper,service)
                 cmd="git_commit_helper__service"
                 ;;
-            git_commit_helper,list)
-                cmd="git_commit_helper__list"
-                ;;
-            git_commit_helper,test)
-                cmd="git_commit_helper__test"
-                ;;
             git_commit_helper,translate)
                 cmd="git_commit_helper__translate"
-                ;;
-            git_commit_helper,commit)
-                cmd="git_commit_helper__commit"
                 ;;
             git_commit_helper__service,add)
                 cmd="git_commit_helper__service__add"
@@ -47,6 +38,12 @@ _git_commit_helper() {
             git_commit_helper__service,set-default)
                 cmd="git_commit_helper__service__set_default"
                 ;;
+            git_commit_helper__service,list)
+                cmd="git_commit_helper__service__list"
+                ;;
+            git_commit_helper__service,test)
+                cmd="git_commit_helper__service__test"
+                ;;
             *)
                 ;;
         esac
@@ -54,7 +51,7 @@ _git_commit_helper() {
 
     case "${cmd}" in
         git_commit_helper)
-            opts="config show install service list test translate commit help"
+            opts="config show install service translate commit help"
             if [[ ${cur} == -* ]] ; then
                 opts="--help -h --version -V"
             fi
@@ -78,15 +75,15 @@ _git_commit_helper() {
             return 0
             ;;
         git_commit_helper__service)
-            opts="add edit remove set-default help"
+            opts="add edit remove set-default list test help"
             COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
             return 0
             ;;
-        git_commit_helper__list)
+        git_commit_helper__service__list)
             COMPREPLY=( $(compgen -W "" -- "${cur}") )
             return 0
             ;;
-        git_commit_helper__test)
+        git_commit_helper__service__test)
             opts=""
             if [[ ${cur} == -* ]] ; then
                 opts="--text -t"
