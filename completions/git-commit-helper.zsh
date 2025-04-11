@@ -30,9 +30,9 @@ _git-commit-helper() {
                 'install[将工具安装到当前 git 仓库]' \
                 'service[管理 AI 服务配置]' \
                 'list[列出所有AI服务]' \
-                'test[测试指定的AI服务]' \
+                'test[测试翻译功能]' \
                 'translate[翻译中文内容为英文]' \
-                'suggest[生成提交信息建议]'
+                'commit[生成提交信息]'
             ;;
         args)
             case $line[1] in
@@ -62,10 +62,11 @@ _git-commit-helper() {
                         '-t[要翻译的文本内容]' \
                         '--text[要翻译的文本内容]'
                     ;;
-                suggest)
+                commit)
                     _arguments \
                         {-t,--type}'[指定提交类型]:type:(feat fix docs style refactor test chore)' \
-                        {-d,--description}'[提供对改动的描述]:description:_files'
+                        {-m,--message}'[提供对改动的描述]:message:_files' \
+                        {-a,--all}'[自动添加所有已修改但未暂存的文件]'
                     ;;
             esac
             ;;

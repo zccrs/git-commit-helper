@@ -32,8 +32,8 @@ _git_commit_helper() {
             git_commit_helper,translate)
                 cmd="git_commit_helper__translate"
                 ;;
-            git_commit_helper,suggest)
-                cmd="git_commit_helper__suggest"
+            git_commit_helper,commit)
+                cmd="git_commit_helper__commit"
                 ;;
             git_commit_helper__service,add)
                 cmd="git_commit_helper__service__add"
@@ -54,7 +54,7 @@ _git_commit_helper() {
 
     case "${cmd}" in
         git_commit_helper)
-            opts="config show install service list test translate suggest help"
+            opts="config show install service list test translate commit help"
             if [[ ${cur} == -* ]] ; then
                 opts="--help -h --version -V"
             fi
@@ -102,19 +102,20 @@ _git_commit_helper() {
             COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
             return 0
             ;;
-        git_commit_helper__suggest)
+        git_commit_helper__commit)
             opts=""
             case $prev in
                 -t|--type)
                     COMPREPLY=( $(compgen -W "feat fix docs style refactor test chore" -- "$cur") )
                     return
                     ;;
-                -d|--description)
+                -m|--message)
                     return
                     ;;
                 *)
                     opts="$opts -t --type"
-                    opts="$opts -d --description"
+                    opts="$opts -m --message"
+                    opts="$opts -a --all"
                     ;;
             esac
             ;;

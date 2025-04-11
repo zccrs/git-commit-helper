@@ -6,14 +6,26 @@ use dialoguer::{Confirm};
 use log::{debug, info};
 use std::process::Command;
 
-pub async fn generate_commit_message(commit_type: Option<String>, user_description: Option<String>) -> Result<()> {
+pub async fn generate_commit_message(commit_type: Option<String>, message: Option<String>, auto_add: bool) -> Result<()> {
+    // 如果指定了 -a 参数，先执行 git add -u
+    if auto_add {
+        info!("自动添加已修改的文件...");
+        let status = Command::new("git")
+            .args(["add", "-u"])
+            .status()?;
+
+        if !status.success() {
+            return Err(anyhow::anyhow!("执行 git add -u 命令失败"));
+        }
+    }
+
     let diff = get_staged_diff()?;
     if diff.is_empty() {
         return Err(anyhow::anyhow!("没有已暂存的改动，请先使用 git add 添加改动"));
     }
 
-    let prompt = match user_description {
-        Some(desc) => format!(
+    let prompt = match message {
+        Some(msg) => format!(
             "我将给你展示一些 git diff 的内容和用户的描述，请你帮我生成一个符合规范的 git commit 信息。\
             用户描述的内容是这次改动的重点，git diff 作为辅助参考。\
             提交信息的格式要求：\
@@ -30,7 +42,7 @@ pub async fn generate_commit_message(commit_type: Option<String>, user_descripti
                test: 测试相关\
                chore: 构建或辅助工具变更\
             \n\n用户的描述：\n{}\n\n改动内容：\n{}", 
-            desc, diff
+            msg, diff
         ),
         None => format!(
             "我将给你展示一些 git diff 的内容，请你帮我总结这些改动并生成一个符合规范的 git commit 信息。\

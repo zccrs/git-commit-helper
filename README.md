@@ -77,7 +77,7 @@ git-commit-helper install
 ```bash
 # 智能生成提交信息
 git add .
-git-commit-helper suggest
+git-commit-helper commit
 
 # 或者手动编写并自动翻译
 git commit
@@ -129,7 +129,7 @@ a line exceeds the recommended value of git.
 | show | 显示当前配置 | `git-commit-helper show` |
 | install | 安装 Git Hook | `git-commit-helper install [-f]` |
 | test | 测试翻译功能 | `git-commit-helper test -t "测试文本"` |
-| suggest | 生成提交建议 | `git-commit-helper suggest [-t feat]` |
+| commit | 生成提交信息 | `git-commit-helper commit [-t feat] [-a]` |
 | service | 管理 AI 服务 | `git-commit-helper service add` |
 
 ### 提交类型
@@ -147,25 +147,30 @@ a line exceeds the recommended value of git.
 ### 命令行参数
 
 ```bash
-# 生成提交信息建议
-git-commit-helper suggest [选项]
+# 生成提交信息
+git-commit-helper commit [选项]
     -t, --type <TYPE>         指定提交类型 (可选)
-    -d, --description <DESC>  提供对改动的描述 (可选)
+    -m, --message <MSG>       提供对改动的描述 (可选)
+    -a, --all                 自动添加所有已修改但未暂存的文件
+
 ```
 
 示例：
 ```bash
 # 生成提交信息
-git-commit-helper suggest
+git-commit-helper commit
 
 # 指定提交类型
-git-commit-helper suggest --type feat
+git-commit-helper commit --type feat
 
 # 提供改动描述
-git-commit-helper suggest --description "修复了用户无法登录的问题"
+git-commit-helper commit --message "修复了用户无法登录的问题"
 
-# 同时指定类型和描述
-git-commit-helper suggest --type fix --description "修复内存泄漏"
+# 自动添加所有修改并提交
+git-commit-helper commit -a
+
+# 完整示例
+git-commit-helper commit --type fix --message "修复内存泄漏" -a
 ```
 
 ## 📂 项目打包

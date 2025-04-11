@@ -9,7 +9,7 @@ mod config;
 mod git;
 mod translator;
 mod install;
-mod suggest;  // 添加新模块
+mod commit;
 
 #[derive(Parser)]
 #[command(author, version, about, long_about = None)]
@@ -60,15 +60,20 @@ enum Commands {
         #[arg(short, long)]
         text: Option<String>,
     },
-    /// 生成提交信息建议
-    Suggest {
+    /// 生成提交信息
+    #[command(name = "commit")]
+    Commit {
         /// 提交消息的类型
         #[arg(short, long)]
         r#type: Option<String>,
 
         /// 用户对改动的描述
         #[arg(short, long)]
-        description: Option<String>,
+        message: Option<String>,
+
+        /// 自动添加所有已修改但未暂存的文件
+        #[arg(short, long)]
+        all: bool,
     },
 }
 
@@ -280,8 +285,8 @@ async fn main() -> Result<()> {
                 Err(e) => Err(e)
             }
         }
-        Some(Commands::Suggest { r#type, description }) => {
-            suggest::generate_commit_message(r#type, description).await
+        Some(Commands::Commit { r#type, message, all }) => {
+            commit::generate_commit_message(r#type, message, all).await
         }
         None => {
             let commit_msg_path = cli.commit_msg_file.ok_or_else(|| {
