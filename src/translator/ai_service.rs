@@ -204,7 +204,10 @@ fn extract_translation(response: &str) -> String {
 impl Translator for DeepSeekTranslator {
     async fn translate(&self, text: &str) -> anyhow::Result<String> {
         debug!("使用 DeepSeek 进行翻译，API Endpoint: {}", self.endpoint);
-        let client = reqwest::Client::new();
+        let client = reqwest::Client::builder()
+            .timeout(std::time::Duration::from_secs(10))
+            .build()?;
+
         let url = format!("{}/chat/completions", self.endpoint);
         let body = serde_json::json!({
             "model": self.model,
@@ -219,33 +222,47 @@ impl Translator for DeepSeekTranslator {
                 }
             ]
         });
+        let api_key = self.api_key.clone();
 
-        debug!("发送请求到: {}", url);
-        debug!("请求体: {}", serde_json::to_string_pretty(&body).unwrap_or_default());
+        loop {
+            match client
+                .post(&url)
+                .header("Authorization", format!("Bearer {}", api_key))
+                .json(&body)
+                .send()
+                .await
+            {
+                Ok(response) => {
+                    debug!("收到响应: {:#?}", response);
 
-        let response = client
-            .post(&url)
-            .header("Authorization", format!("Bearer {}", self.api_key))
-            .json(&body)
-            .send()
-            .await?;
+                    if !response.status().is_success() {
+                        let error_json = response.json::<serde_json::Value>().await?;
+                        debug!("响应内容: {}", serde_json::to_string_pretty(&error_json)?);
+                        return Err(anyhow::anyhow!("API 调用失败: {}",
+                            error_json["error"]["message"].as_str().unwrap_or("未知错误")));
+                    }
 
-        debug!("收到响应: {:#?}", response);
+                    let result = response.json::<serde_json::Value>().await?;
+                    debug!("响应内容: {}", serde_json::to_string_pretty(&result)?);
 
-        if !response.status().is_success() {
-            let error_json = response.json::<serde_json::Value>().await?;
-            debug!("响应内容: {}", serde_json::to_string_pretty(&error_json)?);
-            return Err(anyhow::anyhow!("API 调用失败: {}",
-                error_json["error"]["message"].as_str().unwrap_or("未知错误")));
+                    let translation = result["choices"][0]["message"]["content"]
+                        .as_str()
+                        .unwrap_or_default();
+                    return Ok(extract_translation(translation));
+                }
+                Err(e) if e.is_timeout() => {
+                    warn!("请求超时: {}", e);
+                    if !Confirm::with_theme(&dialoguer::theme::ColorfulTheme::default())
+                        .with_prompt("请求超时，是否重试？")
+                        .default(true)
+                        .interact()? {
+                        return Err(anyhow::anyhow!("请求超时"));
+                    }
+                    continue;
+                }
+                Err(e) => return Err(e.into()),
+            }
         }
-
-        let result = response.json::<serde_json::Value>().await?;
-        debug!("响应内容: {}", serde_json::to_string_pretty(&result)?);
-
-        let translation = result["choices"][0]["message"]["content"]
-            .as_str()
-            .unwrap_or_default();
-        Ok(extract_translation(translation))
     }
 }
 
@@ -253,7 +270,10 @@ impl Translator for DeepSeekTranslator {
 impl Translator for OpenAITranslator {
     async fn translate(&self, text: &str) -> anyhow::Result<String> {
         debug!("使用 OpenAI 进行翻译，API Endpoint: {}", self.endpoint);
-        let client = reqwest::Client::new();
+        let client = reqwest::Client::builder()
+            .timeout(std::time::Duration::from_secs(10))
+            .build()?;
+
         let url = format!("{}/chat/completions", self.endpoint);
         let body = serde_json::json!({
             "model": self.model,
@@ -268,33 +288,47 @@ impl Translator for OpenAITranslator {
                 }
             ]
         });
+        let api_key = self.api_key.clone();
 
-        debug!("发送请求到: {}", url);
-        debug!("请求体: {}", serde_json::to_string_pretty(&body).unwrap_or_default());
+        loop {
+            match client
+                .post(&url)
+                .header("Authorization", format!("Bearer {}", api_key))
+                .json(&body)
+                .send()
+                .await
+            {
+                Ok(response) => {
+                    debug!("收到响应: {:#?}", response);
 
-        let response = client
-            .post(&url)
-            .header("Authorization", format!("Bearer {}", self.api_key))
-            .json(&body)
-            .send()
-            .await?;
+                    if !response.status().is_success() {
+                        let error_json = response.json::<serde_json::Value>().await?;
+                        debug!("响应内容: {}", serde_json::to_string_pretty(&error_json)?);
+                        return Err(anyhow::anyhow!("API 调用失败: {}",
+                            error_json["error"]["message"].as_str().unwrap_or("未知错误")));
+                    }
 
-        debug!("收到响应: {:#?}", response);
+                    let result = response.json::<serde_json::Value>().await?;
+                    debug!("响应内容: {}", serde_json::to_string_pretty(&result)?);
 
-        if !response.status().is_success() {
-            let error_json = response.json::<serde_json::Value>().await?;
-            debug!("响应内容: {}", serde_json::to_string_pretty(&error_json)?);
-            return Err(anyhow::anyhow!("API 调用失败: {}",
-                error_json["error"]["message"].as_str().unwrap_or("未知错误")));
+                    let translation = result["choices"][0]["message"]["content"]
+                        .as_str()
+                        .unwrap_or_default();
+                    return Ok(extract_translation(translation));
+                }
+                Err(e) if e.is_timeout() => {
+                    warn!("请求超时: {}", e);
+                    if !Confirm::with_theme(&dialoguer::theme::ColorfulTheme::default())
+                        .with_prompt("请求超时，是否重试？")
+                        .default(true)
+                        .interact()? {
+                        return Err(anyhow::anyhow!("请求超时"));
+                    }
+                    continue;
+                }
+                Err(e) => return Err(e.into()),
+            }
         }
-
-        let result = response.json::<serde_json::Value>().await?;
-        debug!("响应内容: {}", serde_json::to_string_pretty(&result)?);
-
-        let translation = result["choices"][0]["message"]["content"]
-            .as_str()
-            .unwrap_or_default();
-        Ok(extract_translation(translation))
     }
 }
 
@@ -302,7 +336,10 @@ impl Translator for OpenAITranslator {
 impl Translator for ClaudeTranslator {
     async fn translate(&self, text: &str) -> anyhow::Result<String> {
         debug!("使用 Claude 进行翻译，API Endpoint: {}", self.endpoint);
-        let client = reqwest::Client::new();
+        let client = reqwest::Client::builder()
+            .timeout(std::time::Duration::from_secs(10))
+            .build()?;
+
         let url = format!("{}/messages", self.endpoint);
         let body = serde_json::json!({
             "model": self.model,
@@ -317,34 +354,48 @@ impl Translator for ClaudeTranslator {
                 }
             ]
         });
+        let api_key = self.api_key.clone();
 
-        debug!("发送请求到: {}", url);
-        debug!("请求体: {}", serde_json::to_string_pretty(&body).unwrap_or_default());
+        loop {
+            match client
+                .post(&url)
+                .header("Authorization", format!("Bearer {}", api_key))
+                .header("anthropic-version", "2023-06-01")
+                .json(&body)
+                .send()
+                .await
+            {
+                Ok(response) => {
+                    debug!("收到响应: {:#?}", response);
 
-        let response = client
-            .post(&url)
-            .header("Authorization", format!("Bearer {}", self.api_key))
-            .header("anthropic-version", "2023-06-01")
-            .json(&body)
-            .send()
-            .await?;
+                    if !response.status().is_success() {
+                        let error_json = response.json::<serde_json::Value>().await?;
+                        debug!("响应内容: {}", serde_json::to_string_pretty(&error_json)?);
+                        return Err(anyhow::anyhow!("API 调用失败: {}",
+                            error_json["error"]["message"].as_str().unwrap_or("未知错误")));
+                    }
 
-        debug!("收到响应: {:#?}", response);
+                    let result = response.json::<serde_json::Value>().await?;
+                    debug!("响应内容: {}", serde_json::to_string_pretty(&result)?);
 
-        if !response.status().is_success() {
-            let error_json = response.json::<serde_json::Value>().await?;
-            debug!("响应内容: {}", serde_json::to_string_pretty(&error_json)?);
-            return Err(anyhow::anyhow!("API 调用失败: {}",
-                error_json["error"]["message"].as_str().unwrap_or("未知错误")));
+                    let translation = result["content"][0]["text"]
+                        .as_str()
+                        .unwrap_or_default();
+                    return Ok(extract_translation(translation));
+                }
+                Err(e) if e.is_timeout() => {
+                    warn!("请求超时: {}", e);
+                    if !Confirm::with_theme(&dialoguer::theme::ColorfulTheme::default())
+                        .with_prompt("请求超时，是否重试？")
+                        .default(true)
+                        .interact()? {
+                        return Err(anyhow::anyhow!("请求超时"));
+                    }
+                    continue;
+                }
+                Err(e) => return Err(e.into()),
+            }
         }
-
-        let result = response.json::<serde_json::Value>().await?;
-        debug!("响应内容: {}", serde_json::to_string_pretty(&result)?);
-
-        let translation = result["content"][0]["text"]
-            .as_str()
-            .unwrap_or_default();
-        Ok(extract_translation(translation))
     }
 }
 
@@ -374,7 +425,10 @@ impl Translator for CopilotTranslator {
 impl Translator for GeminiTranslator {
     async fn translate(&self, text: &str) -> anyhow::Result<String> {
         debug!("使用 Gemini 进行翻译，API Endpoint: {}", self.endpoint);
-        let client = reqwest::Client::new();
+        let client = reqwest::Client::builder()
+            .timeout(std::time::Duration::from_secs(10))
+            .build()?;
+
         let url = format!("{}/models/{}:generateContent", self.endpoint, self.model);
         let body = serde_json::json!({
             "contents": [{
@@ -383,33 +437,47 @@ impl Translator for GeminiTranslator {
                 }]
             }]
         });
+        let api_key = self.api_key.clone();
 
-        debug!("发送请求到: {}", url);
-        debug!("请求体: {}", serde_json::to_string_pretty(&body).unwrap_or_default());
+        loop {
+            match client
+                .post(&url)
+                .header("Authorization", format!("Bearer {}", api_key))
+                .json(&body)
+                .send()
+                .await
+            {
+                Ok(response) => {
+                    debug!("收到响应: {:#?}", response);
 
-        let response = client
-            .post(&url)
-            .header("Authorization", format!("Bearer {}", self.api_key))
-            .json(&body)
-            .send()
-            .await?;
+                    if !response.status().is_success() {
+                        let error_json = response.json::<serde_json::Value>().await?;
+                        debug!("响应内容: {}", serde_json::to_string_pretty(&error_json)?);
+                        return Err(anyhow::anyhow!("API 调用失败: {}",
+                            error_json["error"]["message"].as_str().unwrap_or("未知错误")));
+                    }
 
-        debug!("收到响应: {:#?}", response);
+                    let result = response.json::<serde_json::Value>().await?;
+                    debug!("响应内容: {}", serde_json::to_string_pretty(&result)?);
 
-        if !response.status().is_success() {
-            let error_json = response.json::<serde_json::Value>().await?;
-            debug!("响应内容: {}", serde_json::to_string_pretty(&error_json)?);
-            return Err(anyhow::anyhow!("API 调用失败: {}",
-                error_json["error"]["message"].as_str().unwrap_or("未知错误")));
+                    let translation = result["candidates"][0]["content"]["parts"][0]["text"]
+                        .as_str()
+                        .unwrap_or_default();
+                    return Ok(extract_translation(translation));
+                }
+                Err(e) if e.is_timeout() => {
+                    warn!("请求超时: {}", e);
+                    if !Confirm::with_theme(&dialoguer::theme::ColorfulTheme::default())
+                        .with_prompt("请求超时，是否重试？")
+                        .default(true)
+                        .interact()? {
+                        return Err(anyhow::anyhow!("请求超时"));
+                    }
+                    continue;
+                }
+                Err(e) => return Err(e.into()),
+            }
         }
-
-        let result = response.json::<serde_json::Value>().await?;
-        debug!("响应内容: {}", serde_json::to_string_pretty(&result)?);
-
-        let translation = result["candidates"][0]["content"]["parts"][0]["text"]
-            .as_str()
-            .unwrap_or_default();
-        Ok(extract_translation(translation))
     }
 }
 
@@ -417,7 +485,10 @@ impl Translator for GeminiTranslator {
 impl Translator for GrokTranslator {
     async fn translate(&self, text: &str) -> anyhow::Result<String> {
         debug!("使用 Grok 进行翻译，API Endpoint: {}", self.endpoint);
-        let client = reqwest::Client::new();
+        let client = reqwest::Client::builder()
+            .timeout(std::time::Duration::from_secs(10))
+            .build()?;
+
         let url = format!("{}/chat/completions", self.endpoint);
         let body = serde_json::json!({
             "model": self.model,
@@ -432,33 +503,47 @@ impl Translator for GrokTranslator {
                 }
             ]
         });
+        let api_key = self.api_key.clone();
 
-        debug!("发送请求到: {}", url);
-        debug!("请求体: {}", serde_json::to_string_pretty(&body).unwrap_or_default());
+        loop {
+            match client
+                .post(&url)
+                .header("Authorization", format!("Bearer {}", api_key))
+                .json(&body)
+                .send()
+                .await
+            {
+                Ok(response) => {
+                    debug!("收到响应: {:#?}", response);
 
-        let response = client
-            .post(&url)
-            .header("Authorization", format!("Bearer {}", self.api_key))
-            .json(&body)
-            .send()
-            .await?;
+                    if !response.status().is_success() {
+                        let error_json = response.json::<serde_json::Value>().await?;
+                        debug!("响应内容: {}", serde_json::to_string_pretty(&error_json)?);
+                        return Err(anyhow::anyhow!("API 调用失败: {}",
+                            error_json["error"]["message"].as_str().unwrap_or("未知错误")));
+                    }
 
-        debug!("收到响应: {:#?}", response);
+                    let result = response.json::<serde_json::Value>().await?;
+                    debug!("响应内容: {}", serde_json::to_string_pretty(&result)?);
 
-        if !response.status().is_success() {
-            let error_json = response.json::<serde_json::Value>().await?;
-            debug!("响应内容: {}", serde_json::to_string_pretty(&error_json)?);
-            return Err(anyhow::anyhow!("API 调用失败: {}",
-                error_json["error"]["message"].as_str().unwrap_or("未知错误")));
+                    let translation = result["choices"][0]["message"]["content"]
+                        .as_str()
+                        .unwrap_or_default();
+                    return Ok(extract_translation(translation));
+                }
+                Err(e) if e.is_timeout() => {
+                    warn!("请求超时: {}", e);
+                    if !Confirm::with_theme(&dialoguer::theme::ColorfulTheme::default())
+                        .with_prompt("请求超时，是否重试？")
+                        .default(true)
+                        .interact()? {
+                        return Err(anyhow::anyhow!("请求超时"));
+                    }
+                    continue;
+                }
+                Err(e) => return Err(e.into()),
+            }
         }
-
-        let result = response.json::<serde_json::Value>().await?;
-        debug!("响应内容: {}", serde_json::to_string_pretty(&result)?);
-
-        let translation = result["choices"][0]["message"]["content"]
-            .as_str()
-            .unwrap_or_default();
-        Ok(extract_translation(translation))
     }
 }
 
