@@ -21,7 +21,7 @@ pkgver() {
         printf "%s" "$tag_ver"
     else
         # 如果没有 tag，则使用 0.1.0.r{commit_count} 格式
-        printf "$pkgver.r%s" "$(git rev-list --count HEAD)"
+        printf "$pkgver"
     fi
 }
 
