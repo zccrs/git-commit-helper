@@ -43,19 +43,19 @@ impl Config {
     pub fn load() -> Result<Self> {
         let config_path = Self::config_path()?;
         debug!("尝试加载配置文件: {}", config_path.display());
-        
+
         if !config_path.exists() {  // 移除多余的括号
             warn!("配置文件不存在: {}", config_path.display());
             return Err(anyhow::anyhow!("配置文件不存在，请先运行 'git-commit-helper config' 进行配置"));
         }
-        
+
         let config_str = fs::read_to_string(&config_path)
             .context("读取配置文件失败")?;
         let config: Config = serde_json::from_str(&config_str)
             .context("解析配置文件失败")?;
-        
+
         info!("已加载配置，使用 {:?} 服务", config.default_service);
-        
+
         Ok(config)
     }
 
@@ -88,7 +88,7 @@ impl Config {
             let custom_path: String = Input::new()
                 .with_prompt("请输入配置文件路径 (相对路径将基于可执行文件所在目录)")
                 .interact_text()?;
-            
+
             let path = PathBuf::from(&custom_path);
             if path.is_relative() {
                 let exe_dir = std::env::current_exe()?
@@ -105,7 +105,7 @@ impl Config {
         std::env::set_var("GIT_COMMIT_HELPER_CONFIG", config_path.to_string_lossy().to_string());
 
         let mut services: Vec<AIServiceConfig> = Vec::new();
-        
+
         loop {
             println!("\n当前已配置的 AI 服务:");
             for (i, s) in services.iter().enumerate() {
@@ -190,7 +190,7 @@ impl Config {
         if Confirm::new()
             .with_prompt("是否要测试翻译功能？")
             .default(true)
-            .interact()? 
+            .interact()?
         {
             println!("正在测试翻译功能...");
             let translator = ai_service::create_translator(&config).await?;  // 添加 .await
@@ -213,7 +213,7 @@ impl Config {
                     println!("1. 重新修改配置");
                     println!("2. 强制保存配置");
                     println!("3. 退出");
-                    
+
                     let selection: usize = Input::new()
                         .with_prompt("请输入对应的数字")
                         .validate_with(|input: &usize| -> Result<(), &str> {
@@ -258,7 +258,7 @@ impl Config {
         let config = match service {
             AIService::Copilot => {
                 println!("Copilot 服务需要 GitHub 身份验证...");
-                
+
                 // 尝试获取 GitHub token
                 match crate::translator::get_github_token() {
                     Ok(token) => {
@@ -270,13 +270,13 @@ impl Config {
                             Ok(client) => {
                                 println!("✅ GitHub Copilot 认证成功！");
                                 // 获取可用模型
-                                let models = &client.models;                            
+                                let models = &client.models;
                                 if !models.is_empty() {
                                     println!("\n可用模型:");
                                     for (i, model) in models.iter().enumerate() {
                                         println!("  {}. {} ({})", i+1, model.name, model.id);
                                     }
-                                    
+
                                     // 让用户选择模型
                                     let model_count = models.len();
                                     let selection = Input::<String>::new()
@@ -292,7 +292,7 @@ impl Config {
                                             }
                                         })
                                         .interact()?;
-                                    
+
                                     // 处理用户选择
                                     let model_id = if selection.is_empty() {
                                         "copilot-chat".to_string()
@@ -300,7 +300,7 @@ impl Config {
                                         let idx = selection.parse::<usize>().unwrap() - 1;
                                         models[idx].id.clone()
                                     };
-                                    
+
                                     // 返回配置，使用用户选择的模型
                                     AIServiceConfig {
                                         service: AIService::Copilot,
@@ -334,7 +334,7 @@ impl Config {
                         println!("\n按回车键继续...");
                         Term::stdout().read_line()?;
                         return Err(anyhow::anyhow!("无法获取 GitHub 令牌"));
-                    }                    
+                    }
                 }
             },
             _ => Config::input_service_config_with_default(&AIServiceConfig {
@@ -344,7 +344,7 @@ impl Config {
                 model: None,
             }).await?,
         };
-        
+
         // 添加服务
         if self.services.is_empty() {
             self.default_service = config.service.clone();
@@ -386,7 +386,7 @@ impl Config {
                     println!("1. 重新配置服务");
                     println!("2. 强制保存配置");
                     println!("3. 放弃添加");
-                    
+
                     let selection: usize = Input::new()
                         .with_prompt("请输入对应的数字")
                         .validate_with(|input: &usize| -> Result<(), &str> {
@@ -420,7 +420,7 @@ impl Config {
             self.save()?;
             println!("✅ {:?} 服务已添加（未测试）", service);
         }
-        
+
         info!("AI 服务已添加");
         Ok(())
     }
@@ -448,14 +448,14 @@ impl Config {
 
         let old_config = &self.services[selection - 1];
         let new_config = Config::input_service_config_with_default(old_config).await?;
-        
+
         // 不进行测试，直接更新服务
         self.services[selection - 1] = new_config;
         self.save()?;
-        
+
         println!("✅ 服务配置已更新。请稍后使用 'git-commit-helper test' 命令测试该服务。");
         info!("AI 服务已修改（未测试）");
-        
+
         Ok(())
     }
 
@@ -483,7 +483,7 @@ impl Config {
             .parse::<usize>()?;
 
         let removed = self.services.remove(selection - 1);
-        
+
         if removed.service == self.default_service && !self.services.is_empty() {
             self.default_service = self.services[0].service.clone();
         }
@@ -547,11 +547,11 @@ impl Config {
                             for (i, model) in models.iter().enumerate() {
                                 println!("  {}. {} ({})", i+1, model.name, model.id);
                             }
-                            
+
                             // 显示当前选择的模型
                             let current_model = default.model.as_deref().unwrap_or("copilot-chat");
                             println!("\n当前选择的模型: {}", current_model);
-                            
+
                             // 让用户选择模型
                             let model_count = models.len();
                             let selection = Input::<String>::new()
@@ -567,7 +567,7 @@ impl Config {
                                     }
                                 })
                                 .interact()?;
-                            
+
                             // 处理用户选择
                             let model_id = if selection.is_empty() {
                                 default.model.clone().unwrap_or_else(|| "copilot-chat".to_string())
@@ -575,7 +575,7 @@ impl Config {
                                 let idx = selection.parse::<usize>().unwrap() - 1;
                                 models[idx].id.clone()
                             };
-                            
+
                             return Ok(AIServiceConfig {
                                 service: default.service.clone(),
                                 api_key: default.api_key.clone(),

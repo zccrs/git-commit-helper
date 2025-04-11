@@ -114,14 +114,14 @@ fn wrap_chinese_text(text: &str, max_width: usize) -> String {
 
     for c in text.chars() {
         let char_width = if c.is_ascii() { 1 } else { 2 };
-        
+
         if current_width + char_width > max_width {
             result.push_str(&current_line);
             result.push('\n');
             current_line.clear();
             current_width = 0;
         }
-        
+
         current_line.push(c);
         current_width += char_width;
     }
@@ -165,12 +165,12 @@ fn get_translation_prompt(text: &str) -> String {
             - 包含使用 bcrypt 的密码哈希处理
             - 设置令牌刷新机制
 
-            Please respond with ONLY the commit message following this format, 
+            Please respond with ONLY the commit message following this format,
             DO NOT end commit titles with any punctuation.");
     }
 
     format!(
-        r#"You are a professional translator. Please translate the following Chinese text to English. 
+        r#"You are a professional translator. Please translate the following Chinese text to English.
         Important rules:
         1. Keep all English content, numbers, and English punctuation unchanged
         2. Do not translate any content inside English double quotes
@@ -179,7 +179,7 @@ fn get_translation_prompt(text: &str) -> String {
         5. Return both the wrapped Chinese text and its English translation
 
         Text to translate:
-        
+
         Chinese (wrapped):
         {}
 
@@ -230,7 +230,7 @@ impl Translator for DeepSeekTranslator {
                 }
             ]
         });
-        
+
         debug!("发送请求到: {}", url);
         debug!("请求体: {}", serde_json::to_string_pretty(&body).unwrap_or_default());
 
@@ -246,7 +246,7 @@ impl Translator for DeepSeekTranslator {
         if !response.status().is_success() {
             let error_json = response.json::<serde_json::Value>().await?;
             debug!("响应内容: {}", serde_json::to_string_pretty(&error_json)?);
-            return Err(anyhow::anyhow!("API 调用失败: {}", 
+            return Err(anyhow::anyhow!("API 调用失败: {}",
                 error_json["error"]["message"].as_str().unwrap_or("未知错误")));
         }
 
@@ -295,7 +295,7 @@ impl Translator for OpenAITranslator {
         if !response.status().is_success() {
             let error_json = response.json::<serde_json::Value>().await?;
             debug!("响应内容: {}", serde_json::to_string_pretty(&error_json)?);
-            return Err(anyhow::anyhow!("API 调用失败: {}", 
+            return Err(anyhow::anyhow!("API 调用失败: {}",
                 error_json["error"]["message"].as_str().unwrap_or("未知错误")));
         }
 
@@ -345,7 +345,7 @@ impl Translator for ClaudeTranslator {
         if !response.status().is_success() {
             let error_json = response.json::<serde_json::Value>().await?;
             debug!("响应内容: {}", serde_json::to_string_pretty(&error_json)?);
-            return Err(anyhow::anyhow!("API 调用失败: {}", 
+            return Err(anyhow::anyhow!("API 调用失败: {}",
                 error_json["error"]["message"].as_str().unwrap_or("未知错误")));
         }
 
@@ -410,7 +410,7 @@ impl Translator for GeminiTranslator {
         if !response.status().is_success() {
             let error_json = response.json::<serde_json::Value>().await?;
             debug!("响应内容: {}", serde_json::to_string_pretty(&error_json)?);
-            return Err(anyhow::anyhow!("API 调用失败: {}", 
+            return Err(anyhow::anyhow!("API 调用失败: {}",
                 error_json["error"]["message"].as_str().unwrap_or("未知错误")));
         }
 
@@ -459,7 +459,7 @@ impl Translator for GrokTranslator {
         if !response.status().is_success() {
             let error_json = response.json::<serde_json::Value>().await?;
             debug!("响应内容: {}", serde_json::to_string_pretty(&error_json)?);
-            return Err(anyhow::anyhow!("API 调用失败: {}", 
+            return Err(anyhow::anyhow!("API 调用失败: {}",
                 error_json["error"]["message"].as_str().unwrap_or("未知错误")));
         }
 

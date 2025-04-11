@@ -41,7 +41,7 @@ pub async fn generate_commit_message(commit_type: Option<String>, message: Optio
                refactor: 代码重构\
                test: 测试相关\
                chore: 构建或辅助工具变更\
-            \n\n用户的描述：\n{}\n\n改动内容：\n{}", 
+            \n\n用户的描述：\n{}\n\n改动内容：\n{}",
             msg, diff
         ),
         None => format!(
@@ -59,7 +59,7 @@ pub async fn generate_commit_message(commit_type: Option<String>, message: Optio
                refactor: 代码重构\
                test: 测试相关\
                chore: 构建或辅助工具变更\
-            \n\n以下是改动内容：\n{}", 
+            \n\n以下是改动内容：\n{}",
             diff
         )
     };
@@ -70,7 +70,7 @@ pub async fn generate_commit_message(commit_type: Option<String>, message: Optio
     info!("使用 {:?} 服务生成提交信息", config.default_service);
     let service = config.get_default_service()?;
     let translator = ai_service::create_translator_for_service(service).await?;
-    
+
     println!("\n正在生成提交信息建议...");
     let mut message = translator.translate(&prompt).await?.to_string();
 
@@ -94,7 +94,7 @@ pub async fn generate_commit_message(commit_type: Option<String>, message: Optio
             git::wrap_text(line, 72)
         }
     }).collect::<Vec<_>>().join("\n");
-    
+
     // 预览生成的提交信息
     println!("\n生成的提交信息预览:");
     println!("----------------------------------------");
@@ -105,7 +105,7 @@ pub async fn generate_commit_message(commit_type: Option<String>, message: Optio
     if !Confirm::with_theme(&dialoguer::theme::ColorfulTheme::default())
         .with_prompt("是否使用此提交信息？")
         .default(true)
-        .interact()? 
+        .interact()?
     {
         println!("已取消提交");
         return Ok(());
@@ -141,14 +141,14 @@ pub async fn generate_commit_suggestion(commit_types: &[String], user_descriptio
     };
 
     let message = translator.translate(&prompt).await?.to_string();
-    
+
     // 移除各种 AI 返回的元信息标记
     let message = message
         .trim_start_matches("[NO_TRANSLATE]")
         .trim_start_matches("plaintext")
         .trim()
         .to_string();
-    
+
     // 如果有指定的提交类型，确保使用这些类型
     if !commit_types.is_empty() {
         return Ok(ensure_commit_type(&message, commit_types));
@@ -171,18 +171,18 @@ fn get_staged_diff() -> Result<String> {
 
 fn ensure_commit_type(message: &str, commit_types: &[String]) -> String {
     let first_line = message.lines().next().unwrap_or_default();
-    
+
     if let Some(colon_pos) = first_line.find(':') {
         let current_type = first_line[..colon_pos].trim();
         if !commit_types.contains(&current_type.to_string()) {
-            return format!("{}: {}", 
-                &commit_types[0], 
+            return format!("{}: {}",
+                &commit_types[0],
                 first_line[colon_pos + 1..].trim()
             ) + &message[first_line.len()..];
         }
     } else {
         return format!("{}: {}", &commit_types[0], first_line) + &message[first_line.len()..];
     }
-    
+
     message.to_string()
 }

@@ -15,7 +15,7 @@ pub async fn process_commit_msg(path: &Path) -> anyhow::Result<()> {
     debug!("开始处理提交消息: {}", path.display());
     let content = std::fs::read_to_string(path)?;
     let msg = CommitMessage::parse(&content);
-    
+
     // 检查是否是自动生成的提交消息
     if is_auto_generated_commit(&msg.title) {
         debug!("检测到自动生成的提交消息，跳过翻译");
@@ -38,7 +38,7 @@ pub async fn process_commit_msg(path: &Path) -> anyhow::Result<()> {
 
     let config = crate::config::Config::load()?;
     info!("开始翻译流程，默认使用 {:?} 服务", config.default_service);
-    
+
     // 翻译标题
     let en_title = ai_service::translate_with_fallback(&config, &msg.title).await?;
     let en_title = wrap_text(&en_title, MAX_LINE_LENGTH);

@@ -22,7 +22,7 @@ impl CommitMessage {
         let mark_regex = Regex::new(r"^[a-zA-Z-]+:\s*.+$").unwrap();
         let comment_regex = Regex::new(r"^#.*$").unwrap();
         let mut lines = content.lines().peekable();
-        
+
         // 获取第一个非注释行作为标题
         let title = lines
             .by_ref()
@@ -80,14 +80,14 @@ impl CommitMessage {
     pub fn format(&self) -> String {
         let mut result = Vec::new();
         result.push(self.title.clone());
-        
+
         if let Some(body) = &self.body {
             if !body.is_empty() {
                 result.push(String::new());
                 result.push(body.clone());
             }
         }
-        
+
         result.join("\n")
     }
 }

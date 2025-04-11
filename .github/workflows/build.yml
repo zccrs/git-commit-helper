@@ -14,7 +14,7 @@ permissions:
 jobs:
   build-arch:
     runs-on: ubuntu-latest
-    container: 
+    container:
       image: archlinux:base-devel
       options: --privileged
     steps:

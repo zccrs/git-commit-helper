@@ -115,7 +115,7 @@ async fn main() -> Result<()> {
             if Confirm::new()
                 .with_prompt("是否现在进行配置？")
                 .default(true)
-                .interact()? 
+                .interact()?
             {
                 return config::Config::interactive_config().await;
             }
@@ -195,8 +195,8 @@ async fn main() -> Result<()> {
                     let config = config::Config::load()?;
                     println!("已配置的 AI 服务列表:");
                     for (i, service) in config.services.iter().enumerate() {
-                        println!("[{}] {:?}{}", 
-                            i + 1, 
+                        println!("[{}] {:?}{}",
+                            i + 1,
                             service.service,
                             if service.service == config.default_service { " (默认)" } else { "" }
                         );
@@ -212,8 +212,8 @@ async fn main() -> Result<()> {
                     let service_names: Vec<String> = config.services
                         .iter()
                         .enumerate()
-                        .map(|(i, s)| format!("[{}] {:?}{}", 
-                            i + 1, 
+                        .map(|(i, s)| format!("[{}] {:?}{}",
+                            i + 1,
                             s.service,
                             if s.service == config.default_service { " (默认)" } else { "" }
                         ))
@@ -227,7 +227,7 @@ async fn main() -> Result<()> {
 
                     let service = &config.services[selection];
                     println!("正在测试 {:?} 服务...", service.service);
-                    
+
                     let translator = translator::ai_service::create_translator_for_service(service).await?;
                     debug!("开始发送翻译请求");
                     match translator.translate(&text).await {
@@ -272,7 +272,7 @@ async fn main() -> Result<()> {
 
             let service = config.get_default_service()?;
             println!("正在使用 {:?} 服务进行翻译...", service.service);
-            
+
             let translator = translator::ai_service::create_translator_for_service(service).await?;
             match translator.translate(&content).await {
                 Ok(result) => {

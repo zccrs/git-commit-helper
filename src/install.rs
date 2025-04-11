@@ -51,7 +51,7 @@ pub fn install_git_hook(repo_path: Option<PathBuf>, force: bool) -> Result<()> {
 
 fn handle_existing_hook(hook_path: &Path) -> Result<(bool, bool)> {
     println!("检测到已存在的 commit-msg hook");
-    
+
     let keep_old = Confirm::with_theme(&dialoguer::theme::ColorfulTheme::default())
         .with_prompt("是否保留已存在的 hook 功能？")
         .default(true)
@@ -93,7 +93,7 @@ exec "{}" "$1"
 
     let git_hooks_dir = binary_path.parent().unwrap().parent().unwrap().join("hooks");
     let backup_path = git_hooks_dir.join("commit-msg.old");
-    
+
     match run_before {
         Some(true) => Ok(format!(
             r#"#!/bin/sh
