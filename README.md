@@ -136,6 +136,23 @@ a line exceeds the recommended value of git.
 ```
 </details>
 
+### 翻译命令
+
+使用翻译命令有三种方式：
+```bash
+# 方式1：指定文件路径
+git-commit-helper translate -f path/to/file
+
+# 方式2：指定文本内容
+git-commit-helper translate -t "要翻译的文本"
+
+# 方式3：智能判断（推荐）
+git-commit-helper translate "要翻译的文本"              # 文本内容
+git-commit-helper translate /path/to/existing/file    # 文件路径
+```
+
+命令会自动判断参数内容：如果是一个存在的文件路径则读取文件内容进行翻译，否则将参数内容作为文本进行翻译。
+
 ### 命令概览
 
 | 命令 | 说明 | 示例 |

@@ -51,6 +51,9 @@ enum Commands {
         /// 要翻译的文本内容
         #[arg(short, long)]
         text: Option<String>,
+
+        /// 要翻译的内容，如果是一个存在的文件路径则作为文件处理，否则作为文本内容处理
+        content: Option<String>,
     },
     /// 生成提交信息
     #[command(name = "commit")]
@@ -256,7 +259,7 @@ async fn main() -> Result<()> {
                 }
             }
         }
-        Some(Commands::Translate { file, text }) => {
+        Some(Commands::Translate { file, text, content }) => {
             let config = config::Config::load()?;
             if config.services.is_empty() {
                 return Err(anyhow::anyhow!("没有配置任何 AI 服务，请先添加服务"));
@@ -266,8 +269,16 @@ async fn main() -> Result<()> {
                 std::fs::read_to_string(file_path)?
             } else if let Some(text) = text {
                 text
+            } else if let Some(content) = content {
+                // 检查内容是否为文件路径
+                let path = PathBuf::from(&content);
+                if path.exists() && path.is_file() {
+                    std::fs::read_to_string(path)?
+                } else {
+                    content
+                }
             } else {
-                return Err(anyhow::anyhow!("请提供要翻译的文件（-f）或文本内容（-t）"));
+                return Err(anyhow::anyhow!("请提供要翻译的内容"));
             };
 
             let service = config.get_default_service()?;
