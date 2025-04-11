@@ -1,12 +1,18 @@
 use crate::config;
 use crate::git;
 use crate::translator::ai_service;
+use crate::review;
 use anyhow::Result;
 use dialoguer::{Confirm};
 use log::{debug, info};
 use std::process::Command;
 
-pub async fn generate_commit_message(commit_type: Option<String>, message: Option<String>, auto_add: bool) -> Result<()> {
+pub async fn generate_commit_message(
+    commit_type: Option<String>,
+    message: Option<String>,
+    auto_add: bool,
+    no_review: bool,
+) -> Result<()> {
     // 如果指定了 -a 参数，先执行 git add -u
     if auto_add {
         info!("自动添加已修改的文件...");
@@ -25,6 +31,18 @@ pub async fn generate_commit_message(commit_type: Option<String>, message: Optio
     }
 
     let config = config::Config::load()?;
+
+    // 在确认有暂存的改动后执行代码审查
+    if !no_review && config.ai_review {
+        info!("正在进行代码审查...");
+        if let Some(review) = review::review_changes(&config, no_review).await? {
+            println!("\n{}\n", review);
+        }
+    }
+
+    // 设置环境变量标记跳过后续的代码审查
+    std::env::set_var("GIT_COMMIT_HELPER_SKIP_REVIEW", "1");
+
     let prompt = match message {
         Some(msg) => format!(
             "我将给你展示一些 git diff 的内容和用户的描述，请你帮我生成一个符合规范的 git commit 信息。\
@@ -122,6 +140,9 @@ pub async fn generate_commit_message(commit_type: Option<String>, message: Optio
         .arg("-m")
         .arg(content)
         .status()?;
+
+    // 清理环境变量（无论命令是否执行成功）
+    std::env::remove_var("GIT_COMMIT_HELPER_SKIP_REVIEW");
 
     if !status.success() {
         return Err(anyhow::anyhow!("git commit 命令执行失败"));

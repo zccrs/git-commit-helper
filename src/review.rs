@@ -82,9 +82,8 @@ fn get_staged_changes() -> Result<String> {
     Ok(String::from_utf8(output.stdout)?)
 }
 
-pub fn should_skip_review(content: &str) -> bool {
-    // 跳过合并提交等自动生成的提交
-    content.starts_with("Merge") ||
-    content.starts_with("Cherry-pick") ||
-    content.starts_with("Revert")
+pub fn should_skip_review(message: &str) -> bool {
+    message.starts_with("Merge") ||
+    message.starts_with("Cherry-pick") ||
+    message.starts_with("Revert")
 }

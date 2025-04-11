@@ -1,7 +1,7 @@
 use anyhow::Result;
 use clap::{Parser, Subcommand};
 use dialoguer::{Confirm, Select, Input};
-use log::debug;
+use log::{debug};  // 移除未使用的 info
 use std::path::{PathBuf};
 use crate::config::AIService;
 
@@ -318,8 +318,7 @@ async fn main() -> Result<()> {
             }
         }
         Some(Commands::Commit { r#type, message, all }) => {
-            // 生成提交信息
-            commit::generate_commit_message(r#type, message, all).await
+            commit::generate_commit_message(r#type, message, all, cli.no_review).await
         }
         Some(Commands::AIReview { enable, disable, status }) => {
             let mut config = config::Config::load()?;

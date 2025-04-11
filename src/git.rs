@@ -14,6 +14,13 @@ fn is_auto_generated_commit(title: &str) -> bool {
 
 pub async fn process_commit_msg(path: &Path, no_review: bool) -> anyhow::Result<()> {
     debug!("开始处理提交消息: {}", path.display());
+
+    // 检查环境变量是否设置了跳过审查
+    if std::env::var("GIT_COMMIT_HELPER_SKIP_REVIEW").is_ok() {
+        debug!("检测到跳过审查环境变量，跳过代码审查");
+        return Ok(());
+    }
+
     let content = std::fs::read_to_string(path)?;
     let msg = CommitMessage::parse(&content);
 
