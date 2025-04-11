@@ -30,7 +30,8 @@ _git-commit-helper() {
                 'install[将工具安装到当前 git 仓库]' \
                 'service[管理 AI 服务配置]' \
                 'translate[翻译中文内容为英文]' \
-                'commit[生成提交信息]'
+                'commit[生成提交信息]' \
+                'ai-review[管理 AI 代码审查功能]'
             ;;
         args)
             case $line[1] in
@@ -72,7 +73,14 @@ _git-commit-helper() {
                         '-m[用户对改动的描述]' \
                         '--message[用户对改动的描述]' \
                         '-a[自动添加所有已修改但未暂存的文件]' \
-                        '--all[自动添加所有已修改但未暂存的文件]'
+                        '--all[自动添加所有已修改但未暂存的文件]' \
+                        '--no-review[禁用当前提交的代码审查功能]'
+                    ;;
+                ai-review)
+                    _arguments \
+                        '--enable[启用 AI 代码审查]' \
+                        '--disable[禁用 AI 代码审查]' \
+                        '--status[显示当前 AI 代码审查状态]'
                     ;;
             esac
             ;;

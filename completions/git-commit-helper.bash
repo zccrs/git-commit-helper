@@ -116,6 +116,7 @@ _git_commit_helper() {
                     opts="$opts -t --type"
                     opts="$opts -m --message"
                     opts="$opts -a --all"
+                    opts="$opts --no-review"
                     ;;
             esac
             ;;
