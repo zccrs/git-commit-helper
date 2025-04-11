@@ -1,12 +1,14 @@
 use anyhow::{Context, Result};
-use dialoguer::{Confirm, Input};  // 删除未使用的 Select 导入
+use dialoguer::{Confirm, Input};
 use directories::ProjectDirs;
 use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
 use std::fs;
-use crate::translator::{ai_service, CopilotClient};
+use copilot_client::CopilotClient;
+use copilot_client::get_github_token;
 use log::{debug, info, warn};
 use dialoguer::console::Term;
+use crate::translator::ai_service;
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct Config {
@@ -260,7 +262,7 @@ impl Config {
                 println!("Copilot 服务需要 GitHub 身份验证...");
 
                 // 尝试获取 GitHub token
-                match crate::translator::get_github_token() {
+                match get_github_token() {
                     Ok(token) => {
                         println!("✅ 已成功获取 GitHub 令牌");
                         // 尝试连接 Copilot API 验证令牌
@@ -270,7 +272,7 @@ impl Config {
                             Ok(client) => {
                                 println!("✅ GitHub Copilot 认证成功！");
                                 // 获取可用模型
-                                let models = &client.models;
+                                let models = client.get_models().await?;
                                 if !models.is_empty() {
                                     println!("\n可用模型:");
                                     for (i, model) in models.iter().enumerate() {
@@ -541,7 +543,7 @@ impl Config {
                 let editor_version = "1.0.0".to_string();
                 match CopilotClient::new_with_models(default.api_key.clone(), editor_version).await {
                     Ok(client) => {
-                        let models = &client.models;
+                        let models = client.get_models().await?;
                         if !models.is_empty() {
                             println!("\n可用模型:");
                             for (i, model) in models.iter().enumerate() {

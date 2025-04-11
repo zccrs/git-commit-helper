@@ -3,7 +3,7 @@ use dialoguer::{Confirm, Select};
 use log::{debug, info, warn};
 use crate::config::{AIService, Config, AIServiceConfig};
 use crate::translator::{Translator, Message};
-use super::CopilotClient;
+use copilot_client::{CopilotClient};
 
 pub struct DeepSeekTranslator {
     api_key: String,
