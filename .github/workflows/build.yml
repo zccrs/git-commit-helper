@@ -125,11 +125,17 @@ jobs:
       - name: Build Binary
         run: |
           cargo build --release --target ${{ matrix.target }}
+          cd target/${{ matrix.target }}/release
+          if [ "${{ matrix.os }}" = "windows-latest" ]; then
+            mv git-commit-helper${{ matrix.suffix }} git-commit-helper-${{ matrix.os_name }}-${{ matrix.target }}${{ matrix.suffix }}
+          else
+            mv git-commit-helper${{ matrix.suffix }} git-commit-helper-${{ matrix.os_name }}-${{ matrix.target }}
+          fi
       - name: Upload Binary
         uses: actions/upload-artifact@v4
         with:
           name: git-commit-helper-${{ matrix.os_name }}-${{ matrix.target }}
-          path: target/${{ matrix.target }}/release/git-commit-helper${{ matrix.suffix }}
+          path: target/${{ matrix.target }}/release/git-commit-helper-${{ matrix.os_name }}-${{ matrix.target }}${{ matrix.suffix }}
 
   pre-release:
     name: "Pre Release"
