@@ -144,7 +144,7 @@ jobs:
         with:
           token: "${{ secrets.GITHUB_TOKEN }}"
           prerelease: true
-          name: "Development Build"
+          name: "${{ github.ref_name }}-dev"
           tag_name: "pre-release-${{ github.run_id }}"
           files: |
             arch-package/*.pkg.tar.zst
