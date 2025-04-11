@@ -38,7 +38,8 @@ enum Commands {
         force: bool,
     },
     /// 管理 AI 服务配置
-    Service {
+    #[command(name = "ai")]
+    AI {
         #[command(subcommand)]
         command: ServiceCommands,
     },
@@ -154,7 +155,7 @@ async fn main() -> Result<()> {
             install::install_git_hook(path, force)?;
             Ok(())
         }
-        Some(Commands::Service { command }) => {
+        Some(Commands::AI { command }) => {
             let mut config = config::Config::load().unwrap_or_else(|_| config::Config::new());
             match command {
                 ServiceCommands::Add => {
