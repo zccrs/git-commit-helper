@@ -1,3 +1,16 @@
+git-commit-helper (0.3.0-1) unstable; urgency=medium
+
+  * Release version 0.3.0
+  * feat: 新增 AI 代码审查功能
+  * feat: 支持跳过代码审查选项
+  * feat: 优化提交信息生成流程
+  * fix: 改进翻译服务稳定性
+  * fix: 修复多次触发代码审查的问题
+  * chore: 改进多平台构建工作流
+  * docs: 更新 AI 服务测试状态说明
+
+ -- zccrs <zccrs@live.com>  Fri, 11 Apr 2025 00:00:00 +0800
+
 git-commit-helper (0.2.1-1) unstable; urgency=medium
 
   * Release version 0.2.1

@@ -1,5 +1,5 @@
 Name:           git-commit-helper
-Version:        0.2.1
+Version:        0.3.0
 Release:        1%{?dist}
 Summary:        帮助规范 git commit message 的工具
 
@@ -31,6 +31,16 @@ install -Dm644 completions/git-commit-helper.zsh %{buildroot}%{_datadir}/zsh/sit
 %{_datadir}/zsh/site-functions/_git-commit-helper
 
 %changelog
+* Fri Apr 11 2025 zccrs <zccrs@live.com> - 0.3.0-1
+- Release version 0.3.0
+- Add AI code review functionality
+- Add option to skip code review
+- Optimize commit message generation process
+- Improve translation service stability
+- Fix multiple code review trigger issue
+- Enhance multi-platform build workflow
+- Update AI service testing status documentation
+
 * Fri Apr 11 2025 zccrs <zccrs@live.com> - 0.2.1-1
 - Release version 0.2.1
 
