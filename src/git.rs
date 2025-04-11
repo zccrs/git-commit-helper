@@ -17,28 +17,22 @@ pub async fn process_commit_msg(path: &Path, no_review: bool) -> anyhow::Result<
     let content = std::fs::read_to_string(path)?;
     let msg = CommitMessage::parse(&content);
 
-    // 首先执行代码审查
-    let config = crate::config::Config::load()?;
-    let review_result = if review::should_skip_review(&msg.title) {
-        info!("检测到自动生成的提交消息，跳过代码审查");
-        None
-    } else {
-        info!("正在进行代码审查...");
-        let result = review::review_changes(&config, no_review).await?;
-        if let Some(review) = &result {
-            // 直接在终端显示审查结果
-            println!("\n{}\n", review);
-        }
-        result
-    };
-
     // 检查是否是自动生成的提交消息
     if is_auto_generated_commit(&msg.title) {
-        debug!("检测到自动生成的提交消息，跳过翻译");
+        debug!("检测到自动生成的提交消息，跳过翻译和审查");
         return Ok(());
     }
 
-    // 检查是否需要翻译
+    // 获取配置并执行代码审查
+    let config = crate::config::Config::load()?;
+    if !review::should_skip_review(&msg.title) {
+        info!("正在进行代码审查...");
+        if let Some(review) = review::review_changes(&config, no_review).await? {
+            // 直接在终端显示审查结果
+            println!("\n{}\n", review);
+        }
+    }
+
     if !contains_chinese(&msg.title) {
         debug!("未检测到中文内容，跳过翻译");
         return Ok(());
@@ -70,12 +64,6 @@ pub async fn process_commit_msg(path: &Path, no_review: bool) -> anyhow::Result<
 
     // 构建新的消息结构
     let mut body_parts = Vec::new();
-
-    // 添加代码审查报告（如果有）
-    if let Some(review) = review_result {
-        body_parts.push(review);
-        body_parts.push(String::new());  // 空行分隔
-    }
 
     // 添加英文和中文内容
     if let Some(en_body) = en_body {

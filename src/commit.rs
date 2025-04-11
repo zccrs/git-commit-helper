@@ -1,6 +1,7 @@
 use crate::config;
-use crate::git;  // 添加这个导入
+use crate::git;
 use crate::translator::ai_service;
+use crate::review;
 use anyhow::Result;
 use dialoguer::{Confirm};
 use log::{debug, info};
@@ -24,10 +25,21 @@ pub async fn generate_commit_message(commit_type: Option<String>, message: Optio
         return Err(anyhow::anyhow!("没有已暂存的改动，请先使用 git add 添加改动"));
     }
 
+    // 在生成提交信息前先进行代码审查
+    let config = config::Config::load()?;
+    if !review::should_skip_review("") {
+        info!("正在进行代码审查...");
+        if let Some(review) = review::review_changes(&config, false).await? {
+            println!("\n{}\n", review);
+        }
+    } else {
+        info!("跳过代码审查");
+    }
+
     let prompt = match message {
         Some(msg) => format!(
             "我将给你展示一些 git diff 的内容和用户的描述，请你帮我生成一个符合规范的 git commit 信息。\
-            请使用纯文本格式，不要使用任何 markdown 或其他标记语言。\
+            请输出纯文本格式，不要使用任何 markdown 或其他标记语言。\
             用户描述的内容是这次改动的重点，git diff 作为辅助参考。\
             提交信息的格式要求：\
             1. 第一行为标题，简要说明改动内容\
@@ -42,13 +54,13 @@ pub async fn generate_commit_message(commit_type: Option<String>, message: Optio
                refactor: 代码重构\
                test: 测试相关\
                chore: 构建或辅助工具变更\
-            注意：仅返回纯文本格式的提交信息，不要包含任何格式标记。\
+            注意：输出内容仅返回纯文本格式的提交信息，不要包含任何格式标记，比如markdown的标记信息。\
             \n\n用户的描述：\n{}\n\n改动内容：\n{}",
             msg, diff
         ),
         None => format!(
             "我将给你展示一些 git diff 的内容，请你帮我总结这些改动并生成一个符合规范的 git commit 信息。\
-            请使用纯文本格式，不要使用任何 markdown 或其他标记语言。\
+            请输出纯文本格式，不要使用任何 markdown 或其他标记语言。\
             提交信息的格式要求：\
             1. 第一行为标题，简要说明改动内容\
             2. 标题要精简，不超过50个字符\
@@ -62,7 +74,7 @@ pub async fn generate_commit_message(commit_type: Option<String>, message: Optio
                refactor: 代码重构\
                test: 测试相关\
                chore: 构建或辅助工具变更\
-            注意：仅返回纯文本格式的提交信息，不要包含任何格式标记。\
+            注意：输出内容仅返回纯文本格式的提交信息，不要包含任何格式标记，比如markdown的标记信息。\
             \n\n以下是改动内容：\n{}",
             diff
         )
@@ -70,7 +82,6 @@ pub async fn generate_commit_message(commit_type: Option<String>, message: Optio
 
     debug!("生成的提示信息：\n{}", prompt);
 
-    let config = config::Config::load()?;
     info!("使用 {:?} 服务生成提交信息", config.default_service);
     let service = config.get_default_service()?;
     let translator = ai_service::create_translator_for_service(service).await?;

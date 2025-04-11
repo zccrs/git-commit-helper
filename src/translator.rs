@@ -86,6 +86,14 @@ impl CommitMessage {
             }
         }
 
+        // 添加标记
+        if !self.marks.is_empty() {
+            if !result.last().map_or(false, |s| s.is_empty()) {
+                result.push(String::new());  // 添加空行分隔
+            }
+            result.extend(self.marks.clone());
+        }
+
         result.join("\n")
     }
 }
