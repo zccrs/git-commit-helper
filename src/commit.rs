@@ -1,7 +1,6 @@
 use crate::config;
 use crate::git;
 use crate::translator::ai_service;
-use crate::review;
 use anyhow::Result;
 use dialoguer::{Confirm};
 use log::{debug, info};
@@ -25,17 +24,7 @@ pub async fn generate_commit_message(commit_type: Option<String>, message: Optio
         return Err(anyhow::anyhow!("没有已暂存的改动，请先使用 git add 添加改动"));
     }
 
-    // 在生成提交信息前先进行代码审查
     let config = config::Config::load()?;
-    if !review::should_skip_review("") {
-        info!("正在进行代码审查...");
-        if let Some(review) = review::review_changes(&config, false).await? {
-            println!("\n{}\n", review);
-        }
-    } else {
-        info!("跳过代码审查");
-    }
-
     let prompt = match message {
         Some(msg) => format!(
             "我将给你展示一些 git diff 的内容和用户的描述，请你帮我生成一个符合规范的 git commit 信息。\

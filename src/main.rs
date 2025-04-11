@@ -2,7 +2,7 @@ use anyhow::Result;
 use clap::{Parser, Subcommand};
 use dialoguer::{Confirm, Select, Input};
 use log::debug;
-use std::path::{Path, PathBuf};
+use std::path::{PathBuf};
 use crate::config::AIService;
 
 mod config;
@@ -318,6 +318,7 @@ async fn main() -> Result<()> {
             }
         }
         Some(Commands::Commit { r#type, message, all }) => {
+            // 生成提交信息
             commit::generate_commit_message(r#type, message, all).await
         }
         Some(Commands::AIReview { enable, disable, status }) => {
@@ -349,15 +350,4 @@ async fn main() -> Result<()> {
             git::process_commit_msg(&commit_msg_path, no_review).await
         }
     }
-}
-
-async fn process_commit_msg(args: &[String]) -> Result<()> {
-    if args.len() != 2 {
-        return Err(anyhow::anyhow!("参数数量不正确"));
-    }
-
-    let no_review = args.iter().any(|arg| arg == "--no-review");
-    let commit_msg_file = Path::new(&args[1]);
-    git::process_commit_msg(commit_msg_file, no_review).await?;
-    Ok(())
 }

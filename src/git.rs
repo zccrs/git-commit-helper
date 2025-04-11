@@ -81,40 +81,13 @@ pub async fn process_commit_msg(path: &Path, no_review: bool) -> anyhow::Result<
     let new_msg = CommitMessage {
         title: en_title,
         body: Some(body_parts.join("\n")),
-        marks: vec![],
+        marks: msg.marks, // 保持原有标记不变
     };
 
     info!("翻译完成，正在写入文件");
     std::fs::write(path, new_msg.format())?;
     info!("处理完成");
     Ok(())
-}
-
-pub fn format_body(en_body: Option<&str>, cn_title: &str, cn_body: Option<&str>, marks: &[String]) -> String {
-    let mut parts = Vec::new();
-
-    // 1. 英文正文
-    if let Some(body) = en_body {
-        parts.push(body.to_string());
-        parts.push(String::new());  // 空行分隔
-    }
-
-    // 2. 中文标题
-    parts.push(cn_title.to_string());
-
-    // 3. 中文正文
-    if let Some(body) = cn_body {
-        parts.push(String::new());  // 空行分隔
-        parts.push(body.to_string());
-    }
-
-    // 4. 其他标记
-    if !marks.is_empty() {
-        parts.push(String::new());  // 空行分隔
-        parts.extend(marks.iter().cloned());
-    }
-
-    parts.join("\n")
 }
 
 fn contains_chinese(text: &str) -> bool {

@@ -2,7 +2,7 @@ use anyhow::Result;
 use std::process::Command;
 use crate::config::Config;
 use crate::translator::ai_service;
-use log::{debug, info};
+use log::{info};
 
 pub async fn review_changes(config: &Config, no_review: bool) -> Result<Option<String>> {
     // 如果命令行指定了 --no-review 或配置文件中禁用了 ai_review，则跳过审查
