@@ -147,9 +147,9 @@ jobs:
             arch-package/*.pkg.tar.zst
             debian-package/pool/*.deb
             rpm-package/*.rpm
-            git-commit-helper-x86_64-unknown-linux-gnu/git-commit-helper
-            git-commit-helper-x86_64-pc-windows-msvc/git-commit-helper.exe
-            git-commit-helper-x86_64-apple-darwin/git-commit-helper
+            git-commit-helper-x86_64-unknown-linux-gnu/*
+            git-commit-helper-x86_64-pc-windows-msvc/*
+            git-commit-helper-x86_64-apple-darwin/*
 
   create-release:
     needs: [build-arch, build-deb, build-rpm, build-binary]
@@ -168,9 +168,9 @@ jobs:
             arch-package/*.pkg.tar.zst
             debian-package/pool/*.deb
             rpm-package/*.rpm
-            git-commit-helper-x86_64-unknown-linux-gnu/git-commit-helper
-            git-commit-helper-x86_64-pc-windows-msvc/git-commit-helper.exe
-            git-commit-helper-x86_64-apple-darwin/git-commit-helper
+            git-commit-helper-x86_64-unknown-linux-gnu/*
+            git-commit-helper-x86_64-pc-windows-msvc/*
+            git-commit-helper-x86_64-apple-darwin/*
 
   deploy-deb-repo:
     needs: [create-release]
