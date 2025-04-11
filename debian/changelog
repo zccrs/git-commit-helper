@@ -1,3 +1,10 @@
+git-commit-helper (0.2.0-1) unstable; urgency=medium
+
+  * Release version 0.2.0.
+  * Improve translation service stability.
+
+ -- zccrs <zccrs@live.com>  Fri, 11 Apr 2025 00:00:00 +0800
+
 git-commit-helper (0.1.0-1) unstable; urgency=medium
 
   * Initial Release.
