@@ -128,8 +128,8 @@ jobs:
       - name: Upload Binary
         uses: actions/upload-artifact@v4
         with:
-          name: binary
-          path: ./git-commit-helper-${{ matrix.os_name }}-${{ matrix.target }}
+          name: git-commit-helper-${{ matrix.os_name }}-${{ matrix.target }}
+          path: target/${{ matrix.target }}/release/git-commit-helper${{ matrix.suffix }}
 
   pre-release:
     name: "Pre Release"
@@ -150,7 +150,7 @@ jobs:
             arch-package/*.pkg.tar.zst
             debian-package/pool/*.deb
             rpm-package/*.rpm
-            binary/*
+            git-commit-helper-*/*
 
   create-release:
     needs: [build-arch, build-deb, build-rpm, build-binary]
@@ -169,7 +169,7 @@ jobs:
             arch-package/*.pkg.tar.zst
             debian-package/pool/*.deb
             rpm-package/*.rpm
-            binary/*
+            git-commit-helper-*/*
 
   deploy-deb-repo:
     needs: [create-release]
