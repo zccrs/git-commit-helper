@@ -45,44 +45,44 @@ pub async fn generate_commit_message(
 
     let prompt = match message {
         Some(msg) => format!(
-            "我将给你展示一些 git diff 的内容和用户的描述，请你帮我生成一个符合规范的 git commit 信息。\
-            请输出纯文本格式，不要使用任何 markdown 或其他标记语言。\
-            用户描述的内容是这次改动的重点，git diff 作为辅助参考。\
-            提交信息的格式要求：\
-            1. 第一行为标题，简要说明改动内容\
-            2. 标题要精简，不超过50个字符\
-            3. 标题的格式为：type: message，其中type为改动类型，message为改动说明\
-            4. 如果提供了具体的type则必须使用该type\
-            5. 如果没有提供type，则根据改动内容自行判断使用以下类型之一：\
-               feat: 新功能\
-               fix: 修复问题\
-               docs: 文档变更\
-               style: 代码格式调整\
-               refactor: 代码重构\
-               test: 测试相关\
-               chore: 构建或辅助工具变更\
-            注意：输出内容仅返回纯文本格式的提交信息，不要包含任何格式标记，比如markdown的标记信息。\
-            \n\n用户的描述：\n{}\n\n改动内容：\n{}",
+            "I will show you some git diff content and a user description. Please help me generate a standardized git commit message.\
+            Please output in plain text format without any markdown or other markup languages.\
+            The user description is the focus of this change, while git diff serves as a reference.\
+            Commit message format requirements:\
+            1. First line is the title, briefly explaining the changes\
+            2. Title should be concise, no more than 50 characters\
+            3. Title format: type: message, where type is the change type and message is the change description\
+            4. If a specific type is provided, it must be used\
+            5. If no type is provided, use one of the following types based on the changes:\
+               feat: new feature\
+               fix: bug fix\
+               docs: documentation changes\
+               style: code style adjustments\
+               refactor: code refactoring\
+               test: test related\
+               chore: build or auxiliary tool changes\
+            Note: Output should only contain plain text commit message, no format markers like markdown.\
+            \n\nUser Description:\n{}\n\nChanges:\n{}",
             msg, diff
         ),
         None => format!(
-            "我将给你展示一些 git diff 的内容，请你帮我总结这些改动并生成一个符合规范的 git commit 信息。\
-            请输出纯文本格式，不要使用任何 markdown 或其他标记语言。\
-            提交信息的格式要求：\
-            1. 第一行为标题，简要说明改动内容\
-            2. 标题要精简，不超过50个字符\
-            3. 标题的格式为：type: message，其中type为改动类型，message为改动说明\
-            4. 如果提供了具体的type则必须使用该type\
-            5. 如果没有提供type，则根据改动内容自行判断使用以下类型之一：\
-               feat: 新功能\
-               fix: 修复问题\
-               docs: 文档变更\
-               style: 代码格式调整\
-               refactor: 代码重构\
-               test: 测试相关\
-               chore: 构建或辅助工具变更\
-            注意：输出内容仅返回纯文本格式的提交信息，不要包含任何格式标记，比如markdown的标记信息。\
-            \n\n以下是改动内容：\n{}",
+            "I will show you some git diff content. Please summarize these changes and generate a standardized git commit message.\
+            Please output in plain text format without any markdown or other markup languages.\
+            Commit message format requirements:\
+            1. First line is the title, briefly explaining the changes\
+            2. Title should be concise, no more than 50 characters\
+            3. Title format: type: message, where type is the change type and message is the change description\
+            4. If a specific type is provided, it must be used\
+            5. If no type is provided, use one of the following types based on the changes:\
+               feat: new feature\
+               fix: bug fix\
+               docs: documentation changes\
+               style: code style adjustments\
+               refactor: code refactoring\
+               test: test related\
+               chore: build or auxiliary tool changes\
+            Note: Output should only contain plain text commit message, no format markers like markdown.\
+            \n\nHere are the changes:\n{}",
             diff
         )
     };
