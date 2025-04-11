@@ -63,7 +63,7 @@ jobs:
       - uses: actions/checkout@v4
       - name: Install dependencies
         run: |
-          dnf install -y rust cargo git rpm-build rpmdevtools
+          dnf install -y rust cargo git rpm-build rpmdevtools openssl-devel pkg-config
       - name: Build package
         run: |
           mkdir -p ~/rpmbuild/{SOURCES,SPECS}
