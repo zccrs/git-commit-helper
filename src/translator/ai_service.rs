@@ -101,7 +101,7 @@ impl GeminiTranslator {
         Self {
             api_key: config.api_key.clone(),
             endpoint: config.api_endpoint.clone()
-                .unwrap_or_else(|| "https://generativelanguage.googleapis.com/v1".into()),
+                .unwrap_or_else(|| "https://generativelanguage.googleapis.com/v1beta".into()),
             model: config.model.clone()
                 .unwrap_or_else(|| "gemini-pro".into()),
             timeout_seconds: crate::config::Config::load()
@@ -449,7 +449,7 @@ impl Translator for GeminiTranslator {
             .timeout(std::time::Duration::from_secs(self.timeout_seconds))
             .build()?;
 
-        let url = format!("{}/models/{}:generateContent", self.endpoint, self.model);
+        let url = format!("{}/models/{}:generateContent?key={}", self.endpoint, self.model, self.api_key);
         let body = serde_json::json!({
             "contents": [{
                 "parts": [{
@@ -457,12 +457,10 @@ impl Translator for GeminiTranslator {
                 }]
             }]
         });
-        let api_key = self.api_key.clone();
 
         loop {
             match client
                 .post(&url)
-                .header("Authorization", format!("Bearer {}", api_key))
                 .json(&body)
                 .send()
                 .await
@@ -480,7 +478,7 @@ impl Translator for GeminiTranslator {
                     let result = response.json::<serde_json::Value>().await?;
                     debug!("响应内容: {}", serde_json::to_string_pretty(&result)?);
 
-                    let translation = result["candidates"][0]["content"]["parts"][0]["text"]
+                    let translation = result["candidates"][0]["output"]
                         .as_str()
                         .unwrap_or_default();
                     return Ok(extract_translation(translation));

@@ -20,10 +20,10 @@
   - OpenAI/GPT (已测试)
   - Claude (未测试)
   - Github Copilot (已测试)
-  - Google Gemini (未测试)
+  - Google Gemini (已测试)
   - Grok (未测试)
 
-  > 注意：目前仅 DeepSeek、OpenAI 和 Github Copilot 经过完整测试验证，其他服务尚未经过完整测试。如果您在使用其他服务时遇到问题，欢迎反馈。
+  > 注意：目前仅 DeepSeek、OpenAI、Github Copilot 和 Google Gemini 经过完整测试验证，其他服务尚未经过完整测试。如果您在使用其他服务时遇到问题，欢迎反馈。
 
 - 🔧 高度可定制
   - 支持自定义 API 地址
