@@ -82,7 +82,7 @@ pub async fn process_commit_msg(path: &Path, no_review: bool) -> anyhow::Result<
 
     if let Some(body) = cn_body {
         body_parts.push(String::new());
-        body_parts.push(body);
+        body_parts.push(wrap_text(&body, MAX_LINE_LENGTH));
     }
 
     let new_msg = CommitMessage {
