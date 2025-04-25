@@ -213,7 +213,14 @@ impl Config {
             .interact()?
         {
             println!("正在测试翻译功能...");
-            let translator = ai_service::create_translator(&config).await?;  // 添加 .await
+            // 创建一个临时的 Config 对象，确保只测试默认服务
+            let test_config = Config {
+                default_service: config.default_service.clone(),
+                services: vec![config.services[default_index - 1].clone()],
+                ai_review: true,
+                timeout_seconds: config.timeout_seconds,
+            };
+            let translator = ai_service::create_translator(&test_config).await?;
             match translator.translate("这是一个测试消息，用于验证翻译功能是否正常。").await {
                 Ok(result) => {
                     println!("\n测试结果:");
@@ -376,7 +383,14 @@ impl Config {
             .interact()?
         {
             println!("正在测试 {:?} 服务...", config.service);
-            let translator = ai_service::create_translator_for_service(&config).await?;
+            // 创建一个临时的 Config 对象，只包含要测试的新服务
+            let test_config = Config {
+                default_service: config.service.clone(),
+                services: vec![config.clone()],
+                ai_review: true,
+                timeout_seconds: self.timeout_seconds,
+            };
+            let translator = ai_service::create_translator(&test_config).await?;
             let text = "这是一个测试消息，用于验证翻译功能是否正常。";
             debug!("开始发送翻译请求");
             match translator.translate(text).await {
