@@ -647,8 +647,16 @@ impl Config {
             .with_initial_text(&default.api_key)
             .interact_text()?;
 
+        let default_endpoint = match default.service {
+            AIService::DeepSeek => "https://api.deepseek.com/v1",
+            AIService::OpenAI => "https://api.openai.com/v1",
+            AIService::Claude => "https://api.anthropic.com/v1",
+            AIService::Copilot => "",  // Copilot 不需要 endpoint
+            AIService::Gemini => "https://generativelanguage.googleapis.com/v1beta",
+            AIService::Grok => "https://api.grok.x.ai/v1",
+        };
         let api_endpoint: String = Input::new()
-            .with_prompt("请输入 API Endpoint (可选，直接回车使用默认值)")
+            .with_prompt(format!("请输入 API Endpoint (可选，直接回车使用默认值) [{}]", default_endpoint))
             .with_initial_text(default.api_endpoint.as_deref().unwrap_or(""))
             .allow_empty(true)
             .interact_text()?;
