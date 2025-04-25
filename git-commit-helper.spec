@@ -1,5 +1,5 @@
 Name:           git-commit-helper
-Version:        0.3.2
+Version:        0.3.3
 Release:        1%{?dist}
 Summary:        帮助规范 git commit message 的工具
 
@@ -31,6 +31,14 @@ install -Dm644 completions/git-commit-helper.zsh %{buildroot}%{_datadir}/zsh/sit
 %{_datadir}/zsh/site-functions/_git-commit-helper
 
 %changelog
+* Fri Apr 25 2025 zccrs <zhangjide@deepin.org> - 0.3.3-1
+- feat: Show default API endpoint when configuring AI service
+- fix: resolve Gemini service integration issues
+- fix: use new service for AI service testing
+- fix: update GitHub token error message
+- fix: Chinese content in the translated commit message now supports automatic wrapping
+- chore: bump version to 0.3.3
+
 * Fri Apr 11 2025 zccrs <zhangjide@deepin.org> - 0.3.2-1
 - Release version 0.3.2
 

@@ -1,3 +1,14 @@
+git-commit-helper (0.3.3) unstable; urgency=medium
+
+  * feat: Show default API endpoint when configuring AI service
+  * fix: resolve Gemini service integration issues
+  * fix: use new service for AI service testing
+  * fix: update GitHub token error message
+  * fix: Chinese content in the translated commit message now supports automatic wrapping
+  * chore: bump version to 0.3.3
+
+ -- zccrs <zhangjide@deepin.org>  Fri, 25 Apr 2025 18:00:45 +0800
+
 git-commit-helper (0.3.2) unstable; urgency=medium
 
   * Release version 0.3.2

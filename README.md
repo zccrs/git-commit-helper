@@ -261,6 +261,76 @@ git-commit-helper commit --no-review
 git commit --no-review
 ```
 
+## 🔄 版本更新流程
+
+更新版本时需要修改以下文件：
+
+1. **Cargo.toml**
+   ```toml
+   [package]
+   version = "x.y.z"  # 更新版本号
+   ```
+
+2. **debian/changelog 和 git-commit-helper.spec**
+
+   注意：debian 和 rpm 包的 changelog 都需要更新，并且内容要保持一致。
+
+   对于 debian/changelog：
+   ```
+   git-commit-helper (x.y.z) unstable; urgency=medium
+
+   * 此处列出从上一版本到当前版本的所有提交记录，可以通过以下命令获取：
+   git log <上一版本>..HEAD --oneline
+
+   按类型整理提交记录，例如：
+   * feat: 添加的新功能
+   * fix: 修复的问题
+   * docs: 文档更新
+   * chore: 其他修改
+
+   -- 作者 <邮箱>  `date "+%a, %d %b %Y %H:%M:%S %z"`  # 使用系统当前时间
+   ```
+
+   对于 git-commit-helper.spec：
+   ```
+   %changelog
+   * 发布日期 作者 <邮箱> - x.y.z-1
+   # 此处列出与 debian/changelog 相同的更新内容，保持格式一致：
+   - feat: 添加的新功能
+   - fix: 修复的问题
+   - docs: 文档更新
+   - chore: 其他修改
+   ```
+
+3. **PKGBUILD**
+   ```bash
+   pkgver=x.y.z  # 更新版本号
+   ```
+
+4. **git-commit-helper.spec**
+   ```spec
+   Version:        x.y.z  # 更新版本号
+
+   # 在 %changelog 部分添加新版本信息
+   * 发布日期 作者 <邮箱> - x.y.z-1
+   - Release version x.y.z
+   - 更新内容描述...
+   ```
+
+5. **Git 标签**
+   ```bash
+   # 提交更改
+   git add .
+   git commit -m "chore: bump version to x.y.z"
+
+   # 创建新标签
+   git tag -a vx.y.z -m "Release version x.y.z"
+
+   # 推送更改和标签
+   git push origin master
+   git push origin vx.y.z
+   ```
+
 ## 📂 项目打包
 
 ```bash
