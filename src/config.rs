@@ -348,9 +348,7 @@ impl Config {
                     Err(e) => {
                         println!("❌ 无法获取 GitHub 令牌: {}", e);
                         println!("\n请按照以下步骤获取 GitHub 令牌:");
-                        println!("1. 确保您已登录 GitHub 或 VSCode");
-                        println!("2. 如果您使用 VSCode，请安装并登录 GitHub Copilot 扩展");
-                        println!("3. 如果您使用其他编辑器，请检查相应的 GitHub Copilot 配置");
+                        println!("可使用QtCreator中的Copilot插件获取到copilot的token，或直接使用copilot.nvim在nvim中获取token：https://github.com/github/copilot.vim");
                         println!("\n按回车键继续...");
                         Term::stdout().read_line()?;
                         return Err(anyhow::anyhow!("无法获取 GitHub 令牌"));
