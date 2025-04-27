@@ -86,6 +86,7 @@ enum Commands {
     #[command(name = "github-review")]
     GithubReview {
         /// Github PR 或 commit 的 URL
+        #[arg(name = "url")]
         url: String,
     },
 
