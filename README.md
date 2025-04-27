@@ -196,11 +196,16 @@ git-commit-helper translate /path/to/existing/file    # 文件路径
 # 全局选项
 --no-review            暂时禁用当前提交的代码审查功能
 
-# GitHub 代码审查
+# 远程代码审查
 git-commit-helper <URL>
-    直接传入 GitHub PR 或 commit URL，例如：
+    支持以下代码平台的改动审查：
+
+    1. GitHub
     - PR: https://github.com/owner/repo/pull/123
     - Commit: https://github.com/owner/repo/commit/hash
+
+    2. Gerrit
+    - Change: https://gerrit.uniontech.com/c/udcp/udcp-uim/+/179042
 
 # AI 代码审查管理
 git-commit-helper ai-review [选项]

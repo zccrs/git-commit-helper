@@ -1,13 +1,14 @@
 use anyhow::Result;
 use clap::{Parser, Subcommand};
 use dialoguer::{Confirm, Select, Input};
-use log::debug;  // 移除未使用的 info
+use log::debug;
 use std::path::PathBuf;
 use crate::config::AIService;
 
 mod config;
 mod git;
 mod github;
+mod gerrit;
 mod translator;
 mod install;
 mod commit;
@@ -20,8 +21,8 @@ struct Cli {
     #[command(subcommand)]
     command: Option<Commands>,
 
-    /// Git commit message file path 或 GitHub URL
-    #[arg(help = "Git commit message file path or GitHub URL")]
+    /// Git commit message file path 或 GitHub/Gerrit URL
+    #[arg(help = "Git commit message file path or GitHub/Gerrit URL")]
     input: Option<String>,
 
     /// 禁用代码审查功能
@@ -40,7 +41,6 @@ enum Commands {
         /// 指定 git 仓库路径，默认为当前目录
         #[arg(short, long)]
         path: Option<PathBuf>,
-
         /// 强制安装
         #[arg(short, long)]
         force: bool,
@@ -56,12 +56,10 @@ enum Commands {
         /// 要翻译的文件路径
         #[arg(short, long)]
         file: Option<PathBuf>,
-
         /// 要翻译的文本内容
         #[arg(short, long)]
         text: Option<String>,
-
-        /// 要翻译的内容，如果是一个存在的文件路径则作为文件处理，否则作为文本内容处理
+        /// 要翻译的内容
         content: Option<String>,
     },
     /// 生成提交信息
@@ -70,15 +68,12 @@ enum Commands {
         /// 提交消息的类型
         #[arg(short, long)]
         r#type: Option<String>,
-
         /// 用户对改动的描述
         #[arg(short, long)]
         message: Option<String>,
-
         /// 自动添加所有已修改但未暂存的文件
         #[arg(short, long)]
         all: bool,
-
         /// 不翻译提交信息
         #[arg(long)]
         no_translate: bool,
@@ -89,11 +84,9 @@ enum Commands {
         /// 启用 AI 代码审查
         #[arg(long, group = "review_action")]
         enable: bool,
-
         /// 禁用 AI 代码审查
         #[arg(long, group = "review_action")]
         disable: bool,
-
         /// 显示当前 AI 代码审查状态
         #[arg(long, group = "review_action")]
         status: bool,
@@ -128,14 +121,7 @@ enum ServiceCommands {
 
 #[tokio::main]
 async fn main() -> Result<()> {
-    // 根据编译模式设置默认日志级别
-    let default_level = if cfg!(debug_assertions) {
-        "debug"
-    } else {
-        "info"
-    };
-
-    // 初始化日志系统
+    let default_level = if cfg!(debug_assertions) { "debug" } else { "info" };
     env_logger::Builder::from_env(env_logger::Env::default().default_filter_or(default_level))
         .format_timestamp(None)
         .format_module_path(false)
@@ -144,21 +130,44 @@ async fn main() -> Result<()> {
     debug!("正在启动 git-commit-helper...");
     let cli = Cli::parse();
 
-    // 检查配置文件
-    if let Err(e) = config::Config::load() {
-        if cli.command != Some(Commands::Config) {
-            println!("错误: {}", e);
-            println!("未检测到有效的 AI 配置，需要先进行配置");
-            if Confirm::new()
-                .with_prompt("是否现在进行配置？")
-                .default(true)
-                .interact()?
-            {
-                return config::Config::interactive_config().await;
+    // 检查当前命令是否需要 Gerrit 认证
+    let needs_gerrit = match &cli.input {
+        Some(input) if input.contains("/+/") => true,
+        _ => false,
+    };
+
+    // 加载配置文件
+    let _config = match config::Config::load() {
+        Ok(mut config) => {
+            // 如果是 Gerrit URL 且没有配置认证信息，提示用户配置
+            if needs_gerrit && config.gerrit.is_none() {
+                println!("检测到 Gerrit URL，但未配置 Gerrit 认证信息。");
+                if Confirm::new()
+                    .with_prompt("是否现在配置 Gerrit 认证？")
+                    .default(true)
+                    .interact()?
+                {
+                    config.setup_gerrit().await?;
+                }
             }
-            return Err(anyhow::anyhow!("请先运行 'git-commit-helper config' 进行配置"));
+            config
         }
-    }
+        Err(e) => {
+            if cli.command != Some(Commands::Config) {
+                println!("错误: {}", e);
+                println!("未检测到有效的 AI 配置，需要先进行配置");
+                if Confirm::new()
+                    .with_prompt("是否现在进行配置？")
+                    .default(true)
+                    .interact()?
+                {
+                    return config::Config::interactive_config().await;
+                }
+                return Err(anyhow::anyhow!("请先运行 'git-commit-helper config' 进行配置"));
+            }
+            config::Config::new()
+        }
+    };
 
     match cli.command {
         Some(Commands::Config) => {
@@ -340,13 +349,11 @@ async fn main() -> Result<()> {
         }
         Some(Commands::AIReview { enable, disable, status }) => {
             let mut config = config::Config::load()?;
-
             if status {
                 println!("AI 代码审查功能当前状态: {}",
                     if config.ai_review { "已启用" } else { "已禁用" });
                 return Ok(());
             }
-
             if enable {
                 config.ai_review = true;
                 config.save()?;
@@ -356,19 +363,18 @@ async fn main() -> Result<()> {
                 config.save()?;
                 println!("已禁用 AI 代码审查功能");
             }
-
             Ok(())
         }
         None => {
             match cli.input {
-                Some(input) if input.contains("github.com") => {
-                    // 处理GitHub URL
+                Some(input) if input.starts_with("http") => {
+                    // 处理远程代码审查链接
                     let config = config::Config::load()?;
                     if config.services.is_empty() {
                         return Err(anyhow::anyhow!("没有配置任何 AI 服务，请先添加服务"));
                     }
 
-                    match review::review_github_changes(&config, &input).await {
+                    match review::review_remote_changes(&config, &input).await {
                         Ok(review) => {
                             println!("\n{}\n", review);
                             Ok(())
@@ -383,7 +389,7 @@ async fn main() -> Result<()> {
                     git::process_commit_msg(&path, no_review).await
                 }
                 None => {
-                    Err(anyhow::anyhow!("Missing input: expected commit message file path or GitHub URL"))
+                    Err(anyhow::anyhow!("Missing input: expected commit message file path or GitHub/Gerrit URL"))
                 }
             }
         }

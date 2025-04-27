@@ -5,6 +5,7 @@ use log::debug;
 
 #[derive(Debug, Deserialize)]
 struct PullRequest {
+    #[allow(dead_code)]
     url: String,
     diff_url: String,
 }

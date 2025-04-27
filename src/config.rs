@@ -18,6 +18,15 @@ pub struct Config {
     pub ai_review: bool,  // 添加 AI Review 开关
     #[serde(default = "default_timeout")]
     pub timeout_seconds: u64,  // 添加请求超时时间设置
+    #[serde(default)]
+    pub gerrit: Option<GerritConfig>,  // Gerrit 配置
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone, Default)]
+pub struct GerritConfig {
+    pub username: Option<String>,
+    pub password: Option<String>,
+    pub token: Option<String>,
 }
 
 // 添加默认值函数
@@ -55,6 +64,7 @@ impl Config {
             services: Vec::new(),
             ai_review: true,  // 默认开启
             timeout_seconds: default_timeout(),
+            gerrit: None,
         }
     }
 
@@ -79,6 +89,61 @@ impl Config {
 
     pub async fn interactive_config() -> Result<()> {
         Box::pin(Self::interactive_config_impl()).await
+    }
+
+    pub async fn setup_gerrit(&mut self) -> Result<()> {
+        println!("\nGerrit 认证配置");
+        println!("选择认证方式：");
+        println!("1) 用户名密码");
+        println!("2) Token");
+        println!("3) 跳过 (不配置)");
+
+        let selection: usize = Input::new()
+            .with_prompt("请选择认证方式")
+            .default(3)
+            .validate_with(|input: &usize| -> Result<(), &str> {
+                if *input >= 1 && *input <= 3 {
+                    Ok(())
+                } else {
+                    Err("请输入 1-3 之间的数字")
+                }
+            })
+            .interact()?;
+
+        let mut gerrit_config = GerritConfig::default();
+
+        match selection {
+            1 => {
+                let username: String = Input::new()
+                    .with_prompt("请输入 Gerrit 用户名")
+                    .interact_text()?;
+
+                let password: String = Input::new()
+                    .with_prompt("请输入 Gerrit 密码")
+                    .interact_text()?;
+
+                gerrit_config.username = Some(username);
+                gerrit_config.password = Some(password);
+            }
+            2 => {
+                let token: String = Input::new()
+                    .with_prompt("请输入 Gerrit Token")
+                    .interact_text()?;
+
+                gerrit_config.token = Some(token);
+            }
+            _ => {
+                // 不配置
+                self.gerrit = None;
+                return Ok(());
+            }
+        }
+
+        self.gerrit = Some(gerrit_config);
+        self.save()?;
+
+        println!("✅ Gerrit 认证信息已保存");
+        Ok(())
     }
 
     pub async fn interactive_config_impl() -> Result<()> {
@@ -194,6 +259,7 @@ impl Config {
             services,
             ai_review: true,  // 默认开启
             timeout_seconds: default_timeout(),
+            gerrit: None,
         };
 
         // 确保配置目录存在
@@ -219,6 +285,7 @@ impl Config {
                 services: vec![config.services[default_index - 1].clone()],
                 ai_review: true,
                 timeout_seconds: config.timeout_seconds,
+                gerrit: None,
             };
             let translator = ai_service::create_translator(&test_config).await?;
             match translator.translate("这是一个测试消息，用于验证翻译功能是否正常。").await {
@@ -389,6 +456,7 @@ impl Config {
                 services: vec![config.clone()],
                 ai_review: true,
                 timeout_seconds: self.timeout_seconds,
+                gerrit: None,
             };
             let translator = ai_service::create_translator(&test_config).await?;
             let text = "这是一个测试消息，用于验证翻译功能是否正常。";

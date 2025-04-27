@@ -3,18 +3,26 @@ use std::process::Command;
 use crate::config::Config;
 use crate::translator::ai_service;
 use crate::github;
+use crate::gerrit;
 use log::{debug, info};
 
-pub async fn review_github_changes(config: &Config, url: &str) -> Result<String> {
-    debug!("开始审查GitHub代码改动: {}", url);
+pub async fn review_remote_changes(config: &Config, url: &str) -> Result<String> {
+    debug!("开始审查远程代码改动: {}", url);
 
     // 根据URL类型获取diff内容
-    let diff = if url.contains("/pull/") {
-        github::get_pr_diff(url).await?
-    } else if url.contains("/commit/") {
-        github::get_commit_diff(url).await?
+    let diff = if url.contains("github.com") {
+        if url.contains("/pull/") {
+            github::get_pr_diff(url).await?
+        } else if url.contains("/commit/") {
+            github::get_commit_diff(url).await?
+        } else {
+            return Err(anyhow::anyhow!("无效的GitHub URL，必须是PR或commit链接"));
+        }
+    } else if url.contains("/+/") {
+        // Gerrit 链接
+        gerrit::get_change_diff(url).await?
     } else {
-        return Err(anyhow::anyhow!("无效的GitHub URL，必须是PR或commit链接"));
+        return Err(anyhow::anyhow!("无效的URL，必须是GitHub或Gerrit链接"));
     };
 
     if diff.trim().is_empty() {
