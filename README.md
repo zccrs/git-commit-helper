@@ -167,7 +167,6 @@ git-commit-helper translate /path/to/existing/file    # 文件路径
 | config | 配置 AI 服务 | `git-commit-helper config` |
 | show | 显示当前配置 | `git-commit-helper show` |
 | install | 安装 Git Hook | `git-commit-helper install [-f]` |
-| github-review | 审查 GitHub PR/commit | `git-commit-helper github-review <URL>` |
 | ai add | 添加 AI 服务 | `git-commit-helper ai add` |
 | ai edit | 编辑 AI 服务配置 | `git-commit-helper ai edit` |
 | ai remove | 删除 AI 服务 | `git-commit-helper ai remove` |
@@ -198,8 +197,8 @@ git-commit-helper translate /path/to/existing/file    # 文件路径
 --no-review            暂时禁用当前提交的代码审查功能
 
 # GitHub 代码审查
-git-commit-helper github-review <URL>
-    支持 GitHub PR 或 commit URL，例如：
+git-commit-helper <URL>
+    直接传入 GitHub PR 或 commit URL，例如：
     - PR: https://github.com/owner/repo/pull/123
     - Commit: https://github.com/owner/repo/commit/hash
 

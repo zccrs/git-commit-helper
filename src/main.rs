@@ -20,8 +20,9 @@ struct Cli {
     #[command(subcommand)]
     command: Option<Commands>,
 
-    #[arg(help = "Git commit message file path")]
-    commit_msg_file: Option<PathBuf>,
+    /// Git commit message file path 或 GitHub URL
+    #[arg(help = "Git commit message file path or GitHub URL")]
+    input: Option<String>,
 
     /// 禁用代码审查功能
     #[arg(long, global = true)]
@@ -82,14 +83,6 @@ enum Commands {
         #[arg(long)]
         no_translate: bool,
     },
-    /// 审查 Github PR 或 commit 的代码改动
-    #[command(name = "github-review")]
-    GithubReview {
-        /// Github PR 或 commit 的 URL
-        #[arg(name = "url")]
-        url: String,
-    },
-
     /// 管理 AI 代码审查功能
     #[command(name = "ai-review")]
     AIReview {
@@ -345,20 +338,6 @@ async fn main() -> Result<()> {
         Some(Commands::Commit { r#type, message, all, no_translate }) => {
             commit::generate_commit_message(r#type, message, all, cli.no_review, no_translate).await
         }
-        Some(Commands::GithubReview { url }) => {
-            let config = config::Config::load()?;
-            if config.services.is_empty() {
-                return Err(anyhow::anyhow!("没有配置任何 AI 服务，请先添加服务"));
-            }
-
-            match review::review_github_changes(&config, &url).await {
-                Ok(review) => {
-                    println!("\n{}\n", review);
-                    Ok(())
-                }
-                Err(e) => Err(e)
-            }
-        }
         Some(Commands::AIReview { enable, disable, status }) => {
             let mut config = config::Config::load()?;
 
@@ -381,11 +360,32 @@ async fn main() -> Result<()> {
             Ok(())
         }
         None => {
-            let commit_msg_path = cli.commit_msg_file.ok_or_else(|| {
-                anyhow::anyhow!("Missing commit message file path")
-            })?;
-            let no_review = cli.no_review;
-            git::process_commit_msg(&commit_msg_path, no_review).await
+            match cli.input {
+                Some(input) if input.contains("github.com") => {
+                    // 处理GitHub URL
+                    let config = config::Config::load()?;
+                    if config.services.is_empty() {
+                        return Err(anyhow::anyhow!("没有配置任何 AI 服务，请先添加服务"));
+                    }
+
+                    match review::review_github_changes(&config, &input).await {
+                        Ok(review) => {
+                            println!("\n{}\n", review);
+                            Ok(())
+                        }
+                        Err(e) => Err(e)
+                    }
+                }
+                Some(path) => {
+                    // 处理Git commit message文件
+                    let path = PathBuf::from(path);
+                    let no_review = cli.no_review;
+                    git::process_commit_msg(&path, no_review).await
+                }
+                None => {
+                    Err(anyhow::anyhow!("Missing input: expected commit message file path or GitHub URL"))
+                }
+            }
         }
     }
 }
