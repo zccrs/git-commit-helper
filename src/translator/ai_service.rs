@@ -154,9 +154,9 @@ fn wrap_chinese_text(text: &str, max_width: usize) -> String {
 }
 
 fn get_translation_prompt(text: &str) -> String {
-    if text.contains("diff --git") {
+    let prompt = if text.contains("diff --git") {
         // Git diff 内容的提示语
-        return String::from(
+        String::from(
             "Please analyze the git diff content and generate a detailed bilingual commit message with:
             1. First line in English: type: message (under 50 characters)
             2. Empty line after the title
@@ -184,10 +184,9 @@ fn get_translation_prompt(text: &str) -> String {
             4. 设置令牌刷新机制
 
             Please respond with ONLY the commit message following this format,
-            DO NOT end commit titles with any punctuation.");
-    }
-
-    format!(
+            DO NOT end commit titles with any punctuation.")
+    } else {
+        format!(
         r#"You are a professional translator. Please translate the following Chinese text to English.
         Important rules:
         1. Keep all English content, numbers, and English punctuation unchanged
@@ -202,8 +201,11 @@ fn get_translation_prompt(text: &str) -> String {
         {}
 
         Please provide the English translation:"#,
-        wrap_chinese_text(text, 72)
-    )
+        wrap_chinese_text(text, 72))
+    };
+
+    debug!("生成的提示词:\n{}", prompt);
+    prompt
 }
 
 fn extract_translation(response: &str) -> String {
@@ -223,24 +225,26 @@ fn extract_translation(response: &str) -> String {
 #[async_trait]
 impl Translator for DeepSeekTranslator {
     async fn translate(&self, text: &str) -> anyhow::Result<String> {
-        debug!("使用 DeepSeek 进行翻译，API Endpoint: {}", self.endpoint);
+        debug!("使用 DeepSeek，API Endpoint: {}", self.endpoint);
         let client = reqwest::Client::builder()
             .timeout(std::time::Duration::from_secs(self.timeout_seconds))
             .build()?;
 
         let url = format!("{}/chat/completions", self.endpoint);
+        let messages = vec![
+            serde_json::json!({
+                "role": "system",
+                "content": get_translation_prompt(text)
+            }),
+            serde_json::json!({
+                "role": "user",
+                "content": text
+            })
+        ];
+        debug!("发送给 DeepSeek 的消息:\n{}", serde_json::to_string_pretty(&messages)?);
         let body = serde_json::json!({
             "model": self.model,
-            "messages": [
-                {
-                    "role": "system",
-                    "content": get_translation_prompt(text)
-                },
-                {
-                    "role": "user",
-                    "content": text
-                }
-            ]
+            "messages": messages
         });
         let api_key = self.api_key.clone();
 
@@ -289,24 +293,26 @@ impl Translator for DeepSeekTranslator {
 #[async_trait]
 impl Translator for OpenAITranslator {
     async fn translate(&self, text: &str) -> anyhow::Result<String> {
-        debug!("使用 OpenAI 进行翻译，API Endpoint: {}", self.endpoint);
+        debug!("使用 OpenAI，API Endpoint: {}", self.endpoint);
         let client = reqwest::Client::builder()
             .timeout(std::time::Duration::from_secs(self.timeout_seconds))
             .build()?;
 
         let url = format!("{}/chat/completions", self.endpoint);
+        let messages = vec![
+            serde_json::json!({
+                "role": "system",
+                "content": get_translation_prompt(text)
+            }),
+            serde_json::json!({
+                "role": "user",
+                "content": text
+            })
+        ];
+        debug!("发送给 OpenAI 的消息:\n{}", serde_json::to_string_pretty(&messages)?);
         let body = serde_json::json!({
             "model": self.model,
-            "messages": [
-                {
-                    "role": "system",
-                    "content": get_translation_prompt(text)
-                },
-                {
-                    "role": "user",
-                    "content": text
-                }
-            ]
+            "messages": messages
         });
         let api_key = self.api_key.clone();
 
@@ -355,24 +361,26 @@ impl Translator for OpenAITranslator {
 #[async_trait]
 impl Translator for ClaudeTranslator {
     async fn translate(&self, text: &str) -> anyhow::Result<String> {
-        debug!("使用 Claude 进行翻译，API Endpoint: {}", self.endpoint);
+        debug!("使用 Claude，API Endpoint: {}", self.endpoint);
         let client = reqwest::Client::builder()
             .timeout(std::time::Duration::from_secs(self.timeout_seconds))
             .build()?;
 
         let url = format!("{}/messages", self.endpoint);
+        let messages = vec![
+            serde_json::json!({
+                "role": "system",
+                "content": get_translation_prompt(text)
+            }),
+            serde_json::json!({
+                "role": "user",
+                "content": text
+            })
+        ];
+        debug!("发送给 Claude 的消息:\n{}", serde_json::to_string_pretty(&messages)?);
         let body = serde_json::json!({
             "model": self.model,
-            "messages": [
-                {
-                    "role": "system",
-                    "content": get_translation_prompt(text)
-                },
-                {
-                    "role": "user",
-                    "content": text
-                }
-            ]
+            "messages": messages
         });
         let api_key = self.api_key.clone();
 
@@ -422,7 +430,7 @@ impl Translator for ClaudeTranslator {
 #[async_trait]
 impl Translator for CopilotTranslator {
     async fn translate(&self, text: &str) -> anyhow::Result<String> {
-        debug!("使用 Copilot 进行翻译");
+        debug!("使用 Copilot");
         let messages = vec![
             Message {
                 role: "system".to_string(),
@@ -433,6 +441,7 @@ impl Translator for CopilotTranslator {
                 content: text.to_string(),
             },
         ];
+        debug!("发送给 Copilot 的消息:\n{}", serde_json::to_string_pretty(&messages)?);
         let response = self.client.chat_completion(messages, self.model.clone()).await?;
         let translation = response.choices.get(0)
             .map(|choice| choice.message.content.clone())
@@ -444,16 +453,18 @@ impl Translator for CopilotTranslator {
 #[async_trait]
 impl Translator for GeminiTranslator {
     async fn translate(&self, text: &str) -> anyhow::Result<String> {
-        debug!("使用 Gemini 进行翻译，API Endpoint: {}", self.endpoint);
+        debug!("使用 Gemini，API Endpoint: {}", self.endpoint);
         let client = reqwest::Client::builder()
             .timeout(std::time::Duration::from_secs(self.timeout_seconds))
             .build()?;
 
         let url = format!("{}/models/{}:generateContent?key={}", self.endpoint, self.model, self.api_key);
+        let prompt = get_translation_prompt(text);
+        debug!("发送给 Gemini 的内容:\n{}", prompt);
         let body = serde_json::json!({
             "contents": [{
                 "parts": [{
-                    "text": get_translation_prompt(text)
+                    "text": prompt
                 }]
             }]
         });
@@ -502,24 +513,26 @@ impl Translator for GeminiTranslator {
 #[async_trait]
 impl Translator for GrokTranslator {
     async fn translate(&self, text: &str) -> anyhow::Result<String> {
-        debug!("使用 Grok 进行翻译，API Endpoint: {}", self.endpoint);
+        debug!("使用 Grok，API Endpoint: {}", self.endpoint);
         let client = reqwest::Client::builder()
             .timeout(std::time::Duration::from_secs(self.timeout_seconds))
             .build()?;
 
         let url = format!("{}/chat/completions", self.endpoint);
+        let messages = vec![
+            serde_json::json!({
+                "role": "system",
+                "content": get_translation_prompt(text)
+            }),
+            serde_json::json!({
+                "role": "user",
+                "content": text
+            })
+        ];
+        debug!("发送给 Grok 的消息:\n{}", serde_json::to_string_pretty(&messages)?);
         let body = serde_json::json!({
             "model": self.model,
-            "messages": [
-                {
-                    "role": "system",
-                    "content": get_translation_prompt(text)
-                },
-                {
-                    "role": "user",
-                    "content": text
-                }
-            ]
+            "messages": messages
         });
         let api_key = self.api_key.clone();
 
@@ -566,7 +579,7 @@ impl Translator for GrokTranslator {
 }
 
 pub async fn create_translator(config: &Config) -> anyhow::Result<Box<dyn Translator>> {
-    info!("创建 {:?} 翻译器", config.default_service);
+    info!("创建 {:?} AI服务", config.default_service);
     let service_config = config.services.iter()
         .find(|s| s.service == config.default_service)
         .ok_or_else(|| anyhow::anyhow!("找不到默认服务的配置"))?;
@@ -581,7 +594,7 @@ pub async fn translate_with_fallback(config: &Config, text: &str) -> anyhow::Res
         return Ok(text.trim().to_string());
     }
 
-    debug!("尝试使用默认服务 {:?} 进行翻译", config.default_service);
+    debug!("尝试使用默认服务 {:?}", config.default_service);
     if let Some(result) = try_translate(&config.default_service, config, text).await {
         return result;
     }
@@ -592,7 +605,7 @@ pub async fn translate_with_fallback(config: &Config, text: &str) -> anyhow::Res
             continue;
         }
 
-        debug!("尝试使用备选服务 {:?} 进行翻译", service_config.service);
+        debug!("尝试使用备选服务 {:?}", service_config.service);
         if let Some(result) = try_translate(&service_config.service, config, text).await {
             return result;
         }
@@ -600,14 +613,14 @@ pub async fn translate_with_fallback(config: &Config, text: &str) -> anyhow::Res
     }
 
     while let Some(service) = select_retry_service(config, &tried_services)? {
-        debug!("用户选择使用 {:?} 重试翻译", service);
+        debug!("用户选择使用 {:?} 重试", service);
         if let Some(result) = try_translate(&service, config, text).await {
             return result;
         }
         tried_services.push(service);
     }
 
-    Err(anyhow::anyhow!("所有翻译服务均失败"))
+    Err(anyhow::anyhow!("所有AI服务均失败"))
 }
 
 async fn try_translate(service: &AIService, config: &Config, text: &str) -> Option<anyhow::Result<String>> {
