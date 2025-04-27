@@ -33,8 +33,8 @@ pub async fn review_remote_changes(config: &Config, url: &str) -> Result<String>
     let translator = ai_service::create_translator(config).await?;
     info!("正在使用 {:?} 服务进行代码审查...", config.default_service);
 
-    let prompt = get_review_prompt(&diff);
-    translator.translate(&prompt).await
+    let system_prompt = get_review_prompt();
+    translator.chat(&system_prompt, &diff).await
 }
 
 pub async fn review_changes(config: &Config, no_review: bool) -> Result<Option<String>> {
@@ -67,14 +67,14 @@ pub async fn review_changes(config: &Config, no_review: bool) -> Result<Option<S
     let translator = ai_service::create_translator(config).await?;
     info!("正在使用 {:?} 服务进行代码审查...", config.default_service);
 
-    let prompt = get_review_prompt(&diff);
-    let review = translator.translate(&prompt).await?;
+    let system_prompt = get_review_prompt();
+    let review = translator.chat(&system_prompt, &diff).await?;
 
     Ok(Some(review))
 }
 
 // 构建代码审查提示语
-fn get_review_prompt(diff: &str) -> String {
+fn get_review_prompt() -> String {
     format!(
         r#"您是一位专业的代码审查者，请对以下代码变更进行审查并给出中文评价。请着重关注：
 
@@ -106,12 +106,7 @@ fn get_review_prompt(diff: &str) -> String {
    - 权限检查
 
 请以"代码审查报告："开头，使用简洁的语言描述发现的问题和改进建议。如果代码符合最佳实践，也请给出正面的评价。
-
-以下是代码变更内容：
-{}
-"#,
-        diff
-    )
+"#)
 }
 
 fn get_staged_changes() -> Result<String> {

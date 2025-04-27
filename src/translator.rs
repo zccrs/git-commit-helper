@@ -1,4 +1,3 @@
-use async_trait::async_trait;
 use regex::Regex;
 use copilot_client::Message;
 
@@ -8,11 +7,6 @@ pub struct CommitMessage {
     pub title: String,
     pub body: Option<String>,
     pub marks: Vec<String>,
-}
-
-#[async_trait]
-pub trait Translator {
-    async fn translate(&self, text: &str) -> anyhow::Result<String>;
 }
 
 impl CommitMessage {
