@@ -7,6 +7,7 @@ use crate::config::AIService;
 
 mod config;
 mod git;
+mod github;
 mod translator;
 mod install;
 mod commit;
@@ -81,6 +82,13 @@ enum Commands {
         #[arg(long)]
         no_translate: bool,
     },
+    /// 审查 Github PR 或 commit 的代码改动
+    #[command(name = "github-review")]
+    GithubReview {
+        /// Github PR 或 commit 的 URL
+        url: String,
+    },
+
     /// 管理 AI 代码审查功能
     #[command(name = "ai-review")]
     AIReview {
@@ -335,6 +343,20 @@ async fn main() -> Result<()> {
         }
         Some(Commands::Commit { r#type, message, all, no_translate }) => {
             commit::generate_commit_message(r#type, message, all, cli.no_review, no_translate).await
+        }
+        Some(Commands::GithubReview { url }) => {
+            let config = config::Config::load()?;
+            if config.services.is_empty() {
+                return Err(anyhow::anyhow!("没有配置任何 AI 服务，请先添加服务"));
+            }
+
+            match review::review_github_changes(&config, &url).await {
+                Ok(review) => {
+                    println!("\n{}\n", review);
+                    Ok(())
+                }
+                Err(e) => Err(e)
+            }
         }
         Some(Commands::AIReview { enable, disable, status }) => {
             let mut config = config::Config::load()?;

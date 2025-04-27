@@ -2,7 +2,32 @@ use anyhow::Result;
 use std::process::Command;
 use crate::config::Config;
 use crate::translator::ai_service;
-use log::{info};
+use crate::github;
+use log::{debug, info};
+
+pub async fn review_github_changes(config: &Config, url: &str) -> Result<String> {
+    debug!("开始审查GitHub代码改动: {}", url);
+
+    // 根据URL类型获取diff内容
+    let diff = if url.contains("/pull/") {
+        github::get_pr_diff(url).await?
+    } else if url.contains("/commit/") {
+        github::get_commit_diff(url).await?
+    } else {
+        return Err(anyhow::anyhow!("无效的GitHub URL，必须是PR或commit链接"));
+    };
+
+    if diff.trim().is_empty() {
+        return Err(anyhow::anyhow!("未发现任何代码改动"));
+    }
+
+    // 复用现有的代码审查逻辑
+    let translator = ai_service::create_translator(config).await?;
+    info!("正在使用 {:?} 服务进行代码审查...", config.default_service);
+
+    let prompt = get_review_prompt(&diff);
+    translator.translate(&prompt).await
+}
 
 pub async fn review_changes(config: &Config, no_review: bool) -> Result<Option<String>> {
     // 如果命令行指定了 --no-review 或配置文件中禁用了 ai_review，则跳过审查
@@ -23,8 +48,26 @@ pub async fn review_changes(config: &Config, no_review: bool) -> Result<Option<S
         return Ok(None);
     }
 
-    // 构建提示语
-    let prompt = format!(
+    // 获取当前改动的差异
+    let diff = get_staged_changes()?;
+    if diff.trim().is_empty() {
+        info!("没有检测到暂存的代码改动");
+        return Ok(None);
+    }
+
+    // 使用配置的 AI 服务进行代码审查
+    let translator = ai_service::create_translator(config).await?;
+    info!("正在使用 {:?} 服务进行代码审查...", config.default_service);
+
+    let prompt = get_review_prompt(&diff);
+    let review = translator.translate(&prompt).await?;
+
+    Ok(Some(review))
+}
+
+// 构建代码审查提示语
+fn get_review_prompt(diff: &str) -> String {
+    format!(
         r#"您是一位专业的代码审查者，请对以下代码变更进行审查并给出中文评价。请着重关注：
 
 1. 代码质量：
@@ -60,14 +103,7 @@ pub async fn review_changes(config: &Config, no_review: bool) -> Result<Option<S
 {}
 "#,
         diff
-    );
-
-    // 使用配置的 AI 服务进行代码审查
-    let translator = ai_service::create_translator(config).await?;
-    info!("正在使用 {:?} 服务进行代码审查...", config.default_service);
-    let review = translator.translate(&prompt).await?;
-
-    Ok(Some(review))
+    )
 }
 
 fn get_staged_changes() -> Result<String> {

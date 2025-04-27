@@ -167,6 +167,7 @@ git-commit-helper translate /path/to/existing/file    # 文件路径
 | config | 配置 AI 服务 | `git-commit-helper config` |
 | show | 显示当前配置 | `git-commit-helper show` |
 | install | 安装 Git Hook | `git-commit-helper install [-f]` |
+| github-review | 审查 GitHub PR/commit | `git-commit-helper github-review <URL>` |
 | ai add | 添加 AI 服务 | `git-commit-helper ai add` |
 | ai edit | 编辑 AI 服务配置 | `git-commit-helper ai edit` |
 | ai remove | 删除 AI 服务 | `git-commit-helper ai remove` |
@@ -195,6 +196,12 @@ git-commit-helper translate /path/to/existing/file    # 文件路径
 ```bash
 # 全局选项
 --no-review            暂时禁用当前提交的代码审查功能
+
+# GitHub 代码审查
+git-commit-helper github-review <URL>
+    支持 GitHub PR 或 commit URL，例如：
+    - PR: https://github.com/owner/repo/pull/123
+    - Commit: https://github.com/owner/repo/commit/hash
 
 # AI 代码审查管理
 git-commit-helper ai-review [选项]
@@ -230,13 +237,20 @@ git-commit-helper commit --type fix --message "修复内存泄漏" -a
 
 ### AI 代码审查功能
 
-工具会在每次提交代码时自动进行 AI 代码审查，提供以下信息：
+工具提供两种代码审查方式：
+
+1. 本地提交审查：在每次提交代码时自动执行
+2. GitHub 代码审查：支持审查 GitHub 上的 PR 或 commit
+
+审查报告包含以下内容：
 1. 代码质量和可维护性评估
 2. 潜在问题或漏洞提示
 3. 性能影响分析
 4. 对现有功能的影响评估
 5. 最佳实践建议
 6. 具体的改进建议
+
+#### 本地提交审查
 
 你可以通过以下方式控制代码审查功能：
 
