@@ -2,7 +2,12 @@ use async_trait::async_trait;
 use dialoguer::{Confirm, Select};
 use log::{debug, info, warn};
 use crate::config::{AIService, Config, AIServiceConfig};
-use crate::translator::Message;
+
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+pub struct Message {
+    pub role: String,
+    pub content: String,
+}
 use copilot_client::CopilotClient;
 
 #[async_trait]
@@ -10,7 +15,7 @@ pub trait AiService: Send + Sync {
     async fn translate(&self, text: &str) -> anyhow::Result<String> {
         // 使用翻译的 prompt
         let system_prompt = get_translation_prompt(text);
-        self.chat(&system_prompt, text).await
+        Ok(self.chat(&system_prompt, text).await?)
     }
 
     async fn chat(&self, system_prompt: &str, user_content: &str) -> anyhow::Result<String>;
@@ -206,14 +211,17 @@ fn get_translation_prompt(text: &str) -> String {
         2. Do not translate any content inside English double quotes
         3. Preserve the case of all English words
         4. For the original Chinese content, add line breaks to keep each line under 72 characters
-        5. Return both the wrapped Chinese text and its English translation
+
+        Example response format:
+
+        feat: add user authentication module
+
+        1. Implement JWT-based authentication system
+        2. Add user login and registration endpoints
+        3. Fix the text display: "中"
 
         Text to translate:
-
-        Chinese (wrapped):
-        {}
-
-        Please provide the English translation:"#,
+        {}"#,
         wrap_chinese_text(text, 72))
     };
 
@@ -428,11 +436,11 @@ impl AiService for CopilotTranslator {
     async fn chat(&self, system_prompt: &str, user_content: &str) -> anyhow::Result<String> {
         debug!("使用 Copilot");
         let messages = vec![
-            Message {
+            copilot_client::Message {
                 role: "system".to_string(),
                 content: system_prompt.to_string(),
             },
-            Message {
+            copilot_client::Message {
                 role: "user".to_string(),
                 content: user_content.to_string(),
             },

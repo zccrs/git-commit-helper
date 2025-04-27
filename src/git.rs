@@ -1,4 +1,5 @@
-use crate::translator::{CommitMessage, ai_service};
+use crate::commit::CommitMessage;
+use crate::ai_service;
 use crate::review;
 use dialoguer::Confirm;
 use log::{debug, info};

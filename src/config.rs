@@ -8,7 +8,7 @@ use copilot_client::CopilotClient;
 use copilot_client::get_github_token;
 use log::{debug, info, warn};
 use dialoguer::console::Term;
-use crate::translator::ai_service;
+use crate::ai_service;
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct Config {

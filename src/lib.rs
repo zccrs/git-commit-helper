@@ -1,3 +1,4 @@
+pub mod ai_service;
 pub mod auth;
 pub mod commit;
 pub mod config;
@@ -7,4 +8,3 @@ pub mod github;
 pub mod gerrit;
 pub mod install;
 pub mod review;
-pub mod translator;

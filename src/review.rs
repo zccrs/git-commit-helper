@@ -1,7 +1,7 @@
 use anyhow::Result;
 use std::process::Command;
 use crate::config::Config;
-use crate::translator::ai_service;
+use crate::ai_service;
 use crate::github;
 use crate::gerrit;
 use log::{debug, info};
