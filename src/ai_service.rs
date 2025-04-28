@@ -210,15 +210,15 @@ fn get_translation_prompt(text: &str) -> String {
         1. Keep all English content, numbers, and English punctuation unchanged
         2. Do not translate any content inside English double quotes
         3. Preserve the case of all English words
-        4. For the original Chinese content, add line breaks to keep each line under 72 characters
+        4. Only return the English translation, DO NOT include the original Chinese text
+        5. Keep simple and concise, no need to rewrite or expand the content
 
         Example response format:
+        feat: add support for external plugins
 
-        feat: add user authentication module
-
-        1. Implement JWT-based authentication system
-        2. Add user login and registration endpoints
-        3. Fix the text display: "中"
+        1. Implement plugin loading mechanism
+        2. Add plugin configuration interface
+        3. Setup plugin discovery path: "/插件"
 
         Text to translate:
         {}"#,
@@ -493,7 +493,7 @@ impl AiService for GeminiTranslator {
                     let result = response.json::<serde_json::Value>().await?;
                     debug!("响应内容: {}", serde_json::to_string_pretty(&result)?);
 
-                    let response = result["candidates"][0]["output"]
+                    let response = result["candidates"][0]["content"]["parts"][0]["text"]
                         .as_str()
                         .unwrap_or_default();
                     return Ok(response.to_string());
