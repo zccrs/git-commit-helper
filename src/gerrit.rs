@@ -28,7 +28,7 @@ pub async fn get_change_info(url: &str) -> Result<String> {
     let base_url = parts[0];
     let mut path_parts = parts[1].split("/+/");
 
-    let project = path_parts.next()
+    let _project = path_parts.next()
         .ok_or_else(|| anyhow::anyhow!("无法解析项目路径"))?
         .trim_end_matches('/');
 

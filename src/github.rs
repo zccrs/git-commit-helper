@@ -2,11 +2,8 @@ use anyhow::Result;
 use reqwest;
 use serde::Deserialize;
 use log::debug;
-use crate::ai_service;
-
 #[derive(Debug, Deserialize)]
 struct Commit {
-    sha: String,
     commit: CommitDetails,
 }
 
@@ -17,7 +14,6 @@ struct CommitDetails {
 
 #[derive(Debug, Deserialize)]
 struct PullRequest {
-    url: String,
     diff_url: String,
     title: String,
     body: Option<String>,
