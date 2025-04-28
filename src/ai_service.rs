@@ -134,9 +134,9 @@ impl GrokTranslator {
         Self {
             api_key: config.api_key.clone(),
             endpoint: config.api_endpoint.clone()
-                .unwrap_or_else(|| "https://api.grok.x.ai/v1".into()),
+                .unwrap_or_else(|| "https://api.x.ai/v1".into()),
             model: config.model.clone()
-                .unwrap_or_else(|| "grok-1".into()),
+                .unwrap_or_else(|| "grok-3-latest".into()),
             timeout_seconds: crate::config::Config::load()
                 .map(|c| c.timeout_seconds)
                 .unwrap_or(20),
