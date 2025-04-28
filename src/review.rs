@@ -9,18 +9,23 @@ use log::{debug, info};
 pub async fn review_remote_changes(config: &Config, url: &str) -> Result<String> {
     debug!("开始审查远程代码改动: {}", url);
 
-    // 根据URL类型获取diff内容
-    let diff = if url.contains("github.com") {
+    // 获取 commit 信息和 diff 内容
+    let (commit_message, diff) = if url.contains("github.com") {
         if url.contains("/pull/") {
-            github::get_pr_diff(url).await?
+            // PR 目前不需要显示 commit 信息
+            (String::new(), github::get_pr_diff(url).await?)
         } else if url.contains("/commit/") {
-            github::get_commit_diff(url).await?
+            let msg = github::get_commit_info(url).await?;
+            let diff = github::get_commit_diff(url).await?;
+            (msg, diff)
         } else {
             return Err(anyhow::anyhow!("无效的GitHub URL，必须是PR或commit链接"));
         }
     } else if url.contains("/+/") {
         // Gerrit 链接
-        gerrit::get_change_diff(url).await?
+        let msg = gerrit::get_change_info(url).await?;
+        let diff = gerrit::get_change_diff(url).await?;
+        (msg, diff)
     } else {
         return Err(anyhow::anyhow!("无效的URL，必须是GitHub或Gerrit链接"));
     };
@@ -29,12 +34,30 @@ pub async fn review_remote_changes(config: &Config, url: &str) -> Result<String>
         return Err(anyhow::anyhow!("未发现任何代码改动"));
     }
 
-    // 复用现有的代码审查逻辑
+    // 翻译 commit 信息（如果存在且是英文）
+    let mut review = String::new();
+    if !commit_message.is_empty() {
+        let commit_info = if commit_message.chars().all(|c| c.is_ascii() || c.is_whitespace()) {
+            // 如果是纯英文，则翻译成中文
+            let translator = ai_service::create_translator(config).await?;
+            let prompt = "请将以下提交信息翻译成中文：\n\n".to_string() + &commit_message;
+            let chinese = translator.chat("你是一个代码提交信息翻译助手。", &prompt).await?;
+            format!("提交信息：\n{}\n\n中文翻译：\n{}\n\n", commit_message, chinese)
+        } else {
+            format!("提交信息：\n{}\n\n", commit_message)
+        };
+        review.push_str(&commit_info);
+    }
+
+    // 代码审查
     let translator = ai_service::create_translator(config).await?;
     info!("正在使用 {:?} 服务进行代码审查...", config.default_service);
 
     let system_prompt = get_review_prompt();
-    translator.chat(&system_prompt, &diff).await
+    let review_result = translator.chat(&system_prompt, &diff).await?;
+    review.push_str(&review_result);
+
+    Ok(review)
 }
 
 pub async fn review_changes(config: &Config, no_review: bool) -> Result<Option<String>> {
