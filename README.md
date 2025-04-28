@@ -244,15 +244,57 @@ git-commit-helper commit --type fix --message "修复内存泄漏" -a
 工具提供两种代码审查方式：
 
 1. 本地提交审查：在每次提交代码时自动执行
-2. GitHub 代码审查：支持审查 GitHub 上的 PR 或 commit
+2. 远程代码审查：支持审查 GitHub 和 Gerrit 上的改动
 
-审查报告包含以下内容：
-1. 代码质量和可维护性评估
-2. 潜在问题或漏洞提示
-3. 性能影响分析
-4. 对现有功能的影响评估
-5. 最佳实践建议
-6. 具体的改进建议
+远程代码审查功能包含：
+1. 提交信息翻译
+   - 显示原始提交标题和内容
+   - 自动检测英文内容并翻译成中文
+   - 支持 PR 描述、commit message 等
+   - 保持原始格式的同时提供翻译
+
+2. 代码变更审查
+   - 代码质量和可维护性评估
+   - 潜在问题或漏洞提示
+   - 性能影响分析
+   - 对现有功能的影响评估
+   - 最佳实践建议
+   - 具体的改进建议
+
+远程审查支持的平台：
+- GitHub
+  - Pull Request 审查（支持 PR 标题和描述的翻译）
+  - Commit 审查（支持 commit message 的翻译）
+- Gerrit
+  - Change 审查（支持完整 commit message 的翻译）
+  - 支持变更描述、Log、Influence 等信息的翻译
+
+示例：
+```bash
+# 审查 GitHub PR
+git-commit-helper https://github.com/owner/repo/pull/123
+
+# 审查 GitHub commit
+git-commit-helper https://github.com/owner/repo/commit/hash
+
+# 审查 Gerrit change
+git-commit-helper https://gerrit.example.com/c/project/+/123456
+```
+
+输出格式：
+```
+标题：<原始标题>
+中文翻译：<标题翻译>
+
+描述：
+<原始描述>
+
+中文翻译：
+<描述翻译>
+
+代码审查报告：
+...（详细的代码审查内容）
+```
 
 #### 本地提交审查
 
