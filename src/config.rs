@@ -721,7 +721,7 @@ impl Config {
             AIService::Claude => "https://api.anthropic.com/v1",
             AIService::Copilot => "",  // Copilot 不需要 endpoint
             AIService::Gemini => "https://generativelanguage.googleapis.com/v1beta",
-            AIService::Grok => "https://api.grok.x.ai/v1",
+            AIService::Grok => "https://api.x.ai/v1",
         };
         let api_endpoint: String = Input::new()
             .with_prompt(format!("请输入 API Endpoint (可选，直接回车使用默认值) [{}]", default_endpoint))
@@ -735,7 +735,7 @@ impl Config {
             AIService::Claude => "claude-3-sonnet-20240229",
             AIService::Copilot => "copilot-chat",
             AIService::Gemini => "gemini-pro",
-            AIService::Grok => "grok-1",
+            AIService::Grok => "grok-3-latest",
         };
         let model: String = Input::new()
             .with_prompt(format!("请输入模型名称 (可选，直接回车使用默认值) [{}]", default_model_name))
