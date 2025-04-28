@@ -1,3 +1,9 @@
+git-commit-helper (0.4.0) unstable; urgency=medium
+
+  * Release version 0.4.0
+
+ -- zccrs <zhangjide@deepin.org>  Mon, 28 Apr 2025 11:55:44 +0800
+
 git-commit-helper (0.3.3) unstable; urgency=medium
 
   * feat: Show default API endpoint when configuring AI service
