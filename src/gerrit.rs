@@ -3,10 +3,25 @@ use reqwest::Client;
 use log::debug;
 use base64::Engine;
 use serde::Deserialize;
+use std::collections::HashMap;
+
+#[derive(Debug, Deserialize)]
+struct CommitInfo {
+    message: String,
+}
+
+#[derive(Debug, Deserialize)]
+struct RevisionInfo {
+    #[serde(rename = "commit")]
+    commit_info: CommitInfo,
+}
 
 #[derive(Debug, Deserialize)]
 struct ChangeInfo {
     subject: String,
+    revisions: HashMap<String, RevisionInfo>,
+    #[serde(rename = "current_revision")]
+    current_revision: String,
 }
 
 pub async fn get_change_info(url: &str) -> Result<String> {
@@ -35,9 +50,9 @@ pub async fn get_change_info(url: &str) -> Result<String> {
     let change_id = path_parts.next()
         .ok_or_else(|| anyhow::anyhow!("无法解析改动ID"))?;
 
-    // 构建 API URL
+    // 构建 API URL，添加选项以获取完整的 commit 信息
     let api_url = format!(
-        "{}/a/changes/{}",
+        "{}/a/changes/{}?o=CURRENT_REVISION&o=CURRENT_COMMIT",
         base_url,
         change_id
     );
@@ -64,7 +79,21 @@ pub async fn get_change_info(url: &str) -> Result<String> {
     let json = json_text.trim_start_matches(")]}'\n");
 
     let info: ChangeInfo = serde_json::from_str(json)?;
-    Ok(info.subject)
+    let current_revision = info.revisions.get(&info.current_revision)
+        .ok_or_else(|| anyhow::anyhow!("未找到当前版本信息"))?;
+
+    let mut result = format!("标题：{}", info.subject);
+    let message = current_revision.commit_info.message.lines()
+        .skip(1)  // 跳过第一行（标题）
+        .collect::<Vec<&str>>()
+        .join("\n")
+        .trim()
+        .to_string();
+
+    if !message.is_empty() {
+        result.push_str(&format!("\n\n描述：\n{}", message));
+    }
+    Ok(result)
 }
 
 pub async fn get_change_diff(url: &str) -> Result<String> {
