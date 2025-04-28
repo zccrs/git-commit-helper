@@ -9,11 +9,12 @@ use log::{debug, info};
 pub async fn review_remote_changes(config: &Config, url: &str) -> Result<String> {
     debug!("开始审查远程代码改动: {}", url);
 
-    // 获取 commit 信息和 diff 内容
-    let (commit_message, diff) = if url.contains("github.com") {
+    // 获取改动信息和 diff 内容
+    let (change_message, diff) = if url.contains("github.com") {
         if url.contains("/pull/") {
-            // PR 目前不需要显示 commit 信息
-            (String::new(), github::get_pr_diff(url).await?)
+            let pr_info = github::get_pr_info(url).await?;
+            let diff = github::get_pr_diff(url).await?;
+            (pr_info, diff)
         } else if url.contains("/commit/") {
             let msg = github::get_commit_info(url).await?;
             let diff = github::get_commit_diff(url).await?;
@@ -34,19 +35,45 @@ pub async fn review_remote_changes(config: &Config, url: &str) -> Result<String>
         return Err(anyhow::anyhow!("未发现任何代码改动"));
     }
 
-    // 翻译 commit 信息（如果存在且是英文）
+    // 翻译改动信息（如果存在且包含英文）
     let mut review = String::new();
-    if !commit_message.is_empty() {
-        let commit_info = if commit_message.chars().all(|c| c.is_ascii() || c.is_whitespace()) {
-            // 如果是纯英文，则翻译成中文
+    if !change_message.is_empty() {
+        // 分离标题和描述
+        let mut parts = change_message.splitn(2, "\n描述：\n");
+        let title = parts.next().unwrap().trim_start_matches("标题：").trim();
+        let description = parts.next();
+
+        let mut info = String::new();
+
+        // 处理标题
+        let title_info = if title.chars().any(|c| c.is_ascii_alphabetic()) {
+            // 如果标题包含英文字符
             let translator = ai_service::create_translator(config).await?;
-            let prompt = "请将以下提交信息翻译成中文：\n\n".to_string() + &commit_message;
+            let prompt = format!("请将以下 PR 标题翻译成中文：\n\n{}", title);
             let chinese = translator.chat("你是一个代码提交信息翻译助手。", &prompt).await?;
-            format!("提交信息：\n{}\n\n中文翻译：\n{}\n\n", commit_message, chinese)
+            format!("标题：{}\n中文翻译：{}\n", title, chinese)
         } else {
-            format!("提交信息：\n{}\n\n", commit_message)
+            format!("标题：{}\n", title)
         };
-        review.push_str(&commit_info);
+        info.push_str(&title_info);
+
+        // 处理描述（如果存在）
+        if let Some(desc) = description {
+            if !desc.trim().is_empty() {
+                if desc.chars().any(|c| c.is_ascii_alphabetic()) {
+                    // 如果描述包含英文字符
+                    let translator = ai_service::create_translator(config).await?;
+                    let prompt = format!("请将以下 PR 描述翻译成中文：\n\n{}", desc);
+                    let chinese = translator.chat("你是一个代码提交信息翻译助手。", &prompt).await?;
+                    info.push_str(&format!("\n描述：\n{}\n中文翻译：\n{}\n", desc, chinese));
+                } else {
+                    info.push_str(&format!("\n描述：\n{}\n", desc));
+                }
+            }
+        }
+
+        review.push_str(&info);
+        review.push('\n');
     }
 
     // 代码审查

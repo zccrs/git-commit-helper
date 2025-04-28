@@ -17,9 +17,51 @@ struct CommitDetails {
 
 #[derive(Debug, Deserialize)]
 struct PullRequest {
-    #[allow(dead_code)]
     url: String,
     diff_url: String,
+    title: String,
+    body: Option<String>,
+}
+
+pub async fn get_pr_info(pr_url: &str) -> Result<String> {
+    debug!("从GitHub获取PR信息: {}", pr_url);
+
+    // 解析PR URL
+    // 例如: https://github.com/owner/repo/pull/123
+    let parts: Vec<&str> = pr_url.split('/').collect();
+    if parts.len() < 7 {
+        return Err(anyhow::anyhow!("无效的GitHub PR URL"));
+    }
+
+    let owner = parts[3];
+    let repo = parts[4];
+    let pr_number = parts[6];
+
+    // 构建API URL
+    let api_url = format!(
+        "https://api.github.com/repos/{}/{}/pulls/{}",
+        owner, repo, pr_number
+    );
+
+    // 发送请求
+    let client = reqwest::Client::new();
+    let pr: PullRequest = client
+        .get(&api_url)
+        .header("User-Agent", "git-commit-helper")
+        .header("Accept", "application/vnd.github.v3+json")
+        .send()
+        .await?
+        .json()
+        .await?;
+
+    let mut info = format!("标题：{}\n", pr.title);
+    if let Some(body) = pr.body {
+        if !body.trim().is_empty() {
+            info.push_str(&format!("\n描述：\n{}", body));
+        }
+    }
+
+    Ok(info)
 }
 
 pub async fn get_commit_info(commit_url: &str) -> Result<String> {
