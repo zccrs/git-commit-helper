@@ -1,3 +1,9 @@
+git-commit-helper (0.4.1) unstable; urgency=medium
+
+  * Release version 0.4.1
+
+ -- zccrs <zhangjide@deepin.org>  Mon, 28 Apr 2025 12:31:04 +0800
+
 git-commit-helper (0.4.0) unstable; urgency=medium
 
   * Release version 0.4.0
