@@ -17,7 +17,17 @@ check_apt_rust_version() {
         return 1
     fi
     # 获取仓库中的版本
-    local repo_version=$(apt-cache policy rustc | grep Candidate | cut -d: -f2 | tr -d ' ')
+    local repo_version=""
+    if ! repo_version=$(apt-cache policy rustc | grep -oP '(?<=Candidate:).*' | tr -d ' '); then
+        echo "无法获取仓库中的 rust 版本信息"
+        return 1
+    fi
+
+    if [ -z "$repo_version" ]; then
+        echo "仓库中未找到可用的 rust 版本"
+        return 1
+    fi
+
     if printf '%s\n%s' "$repo_version" "$required_version" | sort -V | head -n1 | grep -q "$required_version"; then
         echo "apt仓库中的 Rust 版本 ($repo_version) 满足要求"
         return 0
