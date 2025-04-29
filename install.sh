@@ -51,12 +51,20 @@ install_rust_via_apt() {
     return 0
 }
 
+# 初始化rustup环境
+init_rustup() {
+    echo "初始化 rustup..."
+    rustup init -y || return 1
+    # 设置默认工具链为stable，以初始化工作目录
+    rustup default stable || return 1
+    return 0
+}
+
 # 使用apt安装rustup
 install_rustup_via_apt() {
     echo "通过系统包管理器安装 rustup..."
     sudo apt-get update && sudo apt-get install -y rustup || return 1
-    echo "初始化 rustup..."
-    rustup init -y || return 1
+    init_rustup || return 1
     return 0
 }
 
@@ -72,6 +80,7 @@ install_rustup_from_web() {
         echo "使用 curl 下载..."
         curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
     fi
+    init_rustup || return 1
 }
 
 # 使用rustup安装rust
