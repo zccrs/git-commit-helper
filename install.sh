@@ -55,6 +55,8 @@ install_rust_via_apt() {
 install_rustup_via_apt() {
     echo "通过系统包管理器安装 rustup..."
     sudo apt-get update && sudo apt-get install -y rustup || return 1
+    echo "初始化 rustup..."
+    rustup init -y || return 1
     return 0
 }
 
@@ -85,7 +87,20 @@ install_rust() {
         else
             install_rustup_from_web
         fi
+    fi
+
+    # 确保cargo环境变量文件存在且已加载
+    if [ -f "$HOME/.cargo/env" ]; then
         source "$HOME/.cargo/env"
+    else
+        echo "等待 cargo 环境准备完成..."
+        sleep 2
+        if [ -f "$HOME/.cargo/env" ]; then
+            source "$HOME/.cargo/env"
+        else
+            echo "警告: cargo 环境文件未找到，cargo 命令可能无法使用"
+            return 1
+        fi
     fi
 
     echo "安装所需的 Rust 版本..."
