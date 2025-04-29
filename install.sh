@@ -162,7 +162,7 @@ cp ./target/release/git-commit-helper ~/.local/bin/
 chmod +x ~/.local/bin/git-commit-helper
 
 # 安装到当前 git 仓库
-~/.local/bin/git-commit-helper install
+~/.local/bin/git-commit-helper install --force
 
 # 运行配置向导
 ~/.local/bin/git-commit-helper config
