@@ -46,11 +46,20 @@ fi
 # 编译项目
 cargo build --release
 
+# 创建本地二进制目录
+mkdir -p ~/.local/bin
+
+# 安装二进制文件
+cp ./target/release/git-commit-helper ~/.local/bin/
+chmod +x ~/.local/bin/git-commit-helper
+
 # 安装到当前 git 仓库
-./target/release/git-commit-helper install
+~/.local/bin/git-commit-helper install
 
 # 运行配置向导
-./target/release/git-commit-helper config
+~/.local/bin/git-commit-helper config
+
+echo "二进制文件已安装到: ~/.local/bin/git-commit-helper"
 
 # 创建补全文件目录
 mkdir -p ~/.local/share/bash-completion/completions
