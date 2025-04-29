@@ -112,6 +112,24 @@ init_rustup() {
 install_rustup_via_apt() {
     echo "通过系统包管理器安装 rustup..."
     sudo apt-get update && sudo apt-get install -y rustup || return 1
+
+    echo "等待 rustup 准备就绪..."
+    local max_attempts=5
+    local attempt=1
+    while [ $attempt -le $max_attempts ]; do
+        if command -v rustup >/dev/null 2>&1; then
+            break
+        fi
+        echo "尝试 $attempt/$max_attempts: rustup 未就绪，等待..."
+        sleep 2
+        attempt=$((attempt + 1))
+    done
+
+    if ! command -v rustup >/dev/null 2>&1; then
+        echo "错误: 安装后无法找到 rustup 命令"
+        return 1
+    fi
+
     init_rustup || return 1
     return 0
 }
