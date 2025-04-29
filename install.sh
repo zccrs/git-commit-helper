@@ -1,6 +1,48 @@
 #!/bin/bash
 set -e
 
+# 检查系统是否支持apt命令
+check_apt_system() {
+    command -v apt >/dev/null 2>&1
+}
+
+# 检查rust版本
+check_rust_version() {
+    local required_version="1.70.0"
+    if ! command -v rustc >/dev/null 2>&1; then
+        echo "未安装 Rust"
+        return 1
+    fi
+
+    local current_version=$(rustc --version | cut -d' ' -f2)
+    if printf '%s\n%s' "$current_version" "$required_version" | sort -V | head -n1 | grep -q "$required_version"; then
+        return 0
+    else
+        echo "当前 Rust 版本 ($current_version) 低于所需版本 ($required_version)"
+        return 1
+    fi
+}
+
+# 使用rustup安装rust
+install_rust() {
+    if ! command -v rustup >/dev/null 2>&1; then
+        echo "安装 rustup..."
+        curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
+        source "$HOME/.cargo/env"
+    fi
+
+    echo "更新 Rust 到最新稳定版本..."
+    rustup update stable
+}
+
+# 在apt系统上检查并安装rust
+if check_apt_system; then
+    if ! check_rust_version; then
+        echo "在apt系统上检测到 Rust 版本不符合要求，将使用 rustup 安装..."
+        install_rust
+    fi
+fi
+
 # 编译项目
 cargo build --release
 
