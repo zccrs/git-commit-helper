@@ -6,7 +6,28 @@ check_apt_system() {
     command -v apt >/dev/null 2>&1
 }
 
-# 检查rust版本
+# 检查apt仓库中rust的版本
+check_apt_rust_version() {
+    local required_version="1.70.0"
+    # 更新apt缓存
+    sudo apt-get update || return 1
+    # 检查rust包是否存在
+    if ! apt-cache show rustc >/dev/null 2>&1; then
+        echo "apt仓库中未找到 rust 包"
+        return 1
+    fi
+    # 获取仓库中的版本
+    local repo_version=$(apt-cache policy rustc | grep Candidate | cut -d: -f2 | tr -d ' ')
+    if printf '%s\n%s' "$repo_version" "$required_version" | sort -V | head -n1 | grep -q "$required_version"; then
+        echo "apt仓库中的 Rust 版本 ($repo_version) 满足要求"
+        return 0
+    else
+        echo "apt仓库中的 Rust 版本 ($repo_version) 低于所需版本 ($required_version)"
+        return 1
+    fi
+}
+
+# 检查已安装的rust版本
 check_rust_version() {
     local required_version="1.70.0"
     if ! command -v rustc >/dev/null 2>&1; then
@@ -21,6 +42,13 @@ check_rust_version() {
         echo "当前 Rust 版本 ($current_version) 低于所需版本 ($required_version)"
         return 1
     fi
+}
+
+# 使用apt安装rust
+install_rust_via_apt() {
+    echo "通过系统包管理器安装 rust..."
+    sudo apt-get install -y rustc cargo || return 1
+    return 0
 }
 
 # 使用apt安装rustup
@@ -68,8 +96,16 @@ install_rust() {
 # 在apt系统上检查并安装rust
 if check_apt_system; then
     if ! check_rust_version; then
-        echo "在apt系统上检测到 Rust 版本不符合要求，将使用 rustup 安装指定版本..."
-        install_rust
+        echo "检查 apt 仓库中的 rust 版本..."
+        if check_apt_rust_version; then
+            # 仓库中的rust版本满足要求，直接使用apt安装
+            echo "使用系统包管理器安装 rust..."
+            install_rust_via_apt
+        else
+            # 仓库中的rust版本不满足要求，使用rustup安装
+            echo "将使用 rustup 安装所需版本..."
+            install_rust
+        fi
     fi
 fi
 
