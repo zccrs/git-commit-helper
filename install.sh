@@ -23,30 +23,52 @@ check_rust_version() {
     fi
 }
 
+# 使用apt安装rustup
+install_rustup_via_apt() {
+    echo "通过系统包管理器安装 rustup..."
+    sudo apt-get update && sudo apt-get install -y rustup || return 1
+    return 0
+}
+
+# 从官网下载安装rustup
+install_rustup_from_web() {
+    echo "从官网下载 rustup..."
+    if command -v wget >/dev/null 2>&1; then
+        wget -O /tmp/rustup.sh --progress=bar:force:noscroll --show-progress https://sh.rustup.rs
+        echo "安装 rustup..."
+        sh /tmp/rustup.sh -y
+        rm -f /tmp/rustup.sh
+    else
+        echo "使用 curl 下载..."
+        curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
+    fi
+}
+
 # 使用rustup安装rust
 install_rust() {
+    # 如果rustup不存在，先安装rustup
     if ! command -v rustup >/dev/null 2>&1; then
-        echo "下载 rustup..."
-        if command -v wget >/dev/null 2>&1; then
-            wget -O /tmp/rustup.sh --progress=bar:force:noscroll --show-progress https://sh.rustup.rs
-            echo "安装 rustup..."
-            sh /tmp/rustup.sh -y
-            rm -f /tmp/rustup.sh
+        if check_apt_system; then
+            # 优先使用apt安装rustup
+            if ! install_rustup_via_apt; then
+                echo "通过apt安装rustup失败，尝试从官网下载安装..."
+                install_rustup_from_web
+            fi
         else
-            echo "使用 curl 下载..."
-            curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
+            install_rustup_from_web
         fi
         source "$HOME/.cargo/env"
     fi
 
-    echo "更新 Rust 到最新稳定版本..."
-    rustup update stable
+    echo "安装所需的 Rust 版本..."
+    rustup install 1.70.0
+    rustup default 1.70.0
 }
 
 # 在apt系统上检查并安装rust
 if check_apt_system; then
     if ! check_rust_version; then
-        echo "在apt系统上检测到 Rust 版本不符合要求，将使用 rustup 安装..."
+        echo "在apt系统上检测到 Rust 版本不符合要求，将使用 rustup 安装指定版本..."
         install_rust
     fi
 fi
