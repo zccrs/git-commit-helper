@@ -212,10 +212,9 @@ chmod +x ~/.local/bin/git-commit-helper
 # 安装到当前 git 仓库
 ~/.local/bin/git-commit-helper install --force
 
-# 运行配置向导
-~/.local/bin/git-commit-helper config
-
 echo "二进制文件已安装到: ~/.local/bin/git-commit-helper"
+echo "请运行以下命令完成配置:"
+echo "  git-commit-helper config"
 
 # 创建补全文件目录
 mkdir -p ~/.local/share/bash-completion/completions
