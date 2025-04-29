@@ -26,8 +26,16 @@ check_rust_version() {
 # 使用rustup安装rust
 install_rust() {
     if ! command -v rustup >/dev/null 2>&1; then
-        echo "安装 rustup..."
-        curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
+        echo "下载 rustup..."
+        if command -v wget >/dev/null 2>&1; then
+            wget -O /tmp/rustup.sh --progress=bar:force:noscroll --show-progress https://sh.rustup.rs
+            echo "安装 rustup..."
+            sh /tmp/rustup.sh -y
+            rm -f /tmp/rustup.sh
+        else
+            echo "使用 curl 下载..."
+            curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
+        fi
         source "$HOME/.cargo/env"
     fi
 
