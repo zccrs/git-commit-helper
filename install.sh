@@ -72,9 +72,39 @@ install_rust_via_apt() {
 # 初始化rustup环境
 init_rustup() {
     echo "初始化 rustup..."
-    # 使用环境变量跳过PATH检查，设置默认工具链
-    RUSTUP_INIT_SKIP_PATH_CHECK=yes rustup default stable || return 1
-    rustup -v show || return 1
+
+    # 检查rustup是否可用
+    if ! command -v rustup >/dev/null 2>&1; then
+        echo "错误: rustup 命令不可用"
+        return 1
+    fi
+
+    # 显示rustup版本信息
+    echo "rustup版本信息:"
+    rustup -V
+
+    # 检查当前安装的工具链
+    echo "当前工具链信息:"
+    if ! rustup show; then
+        echo "警告: 无法显示工具链信息"
+    fi
+
+    # 设置默认工具链
+    echo "设置默认工具链..."
+    if ! rustup toolchain install stable; then
+        echo "警告: 无法安装 stable 工具链"
+        return 1
+    fi
+
+    if ! rustup default stable; then
+        echo "错误: 无法设置默认工具链"
+        return 1
+    fi
+
+    # 再次检查安装状态
+    echo "安装后的工具链信息:"
+    rustup show
+
     return 0
 }
 
