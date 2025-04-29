@@ -72,9 +72,8 @@ install_rust_via_apt() {
 # 初始化rustup环境
 init_rustup() {
     echo "初始化 rustup..."
-    rustup init -y || return 1
-    # 设置默认工具链为stable，以初始化工作目录
-    rustup default stable || return 1
+    # 使用--default-toolchain指定默认工具链，--no-modify-path避免修改shell配置
+    rustup init --no-modify-path --default-toolchain stable -q || return 1
     return 0
 }
 
