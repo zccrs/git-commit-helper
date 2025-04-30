@@ -118,8 +118,25 @@ pub async fn review_changes(config: &Config, no_review: bool) -> Result<Option<S
 
 // 构建代码审查提示语
 fn get_review_prompt() -> String {
-    format!(
-        r#"您是一位专业的代码审查者，请对以下代码变更进行审查并给出中文评价。请着重关注：
+    // 获取配置文件路径
+    let prompt_path = crate::config::Config::config_path()
+        .expect("无法获取配置目录")
+        .parent()
+        .expect("无法获取父目录")
+        .join("review_prompt.txt");
+
+    // 如果文件存在则读取，否则使用默认提示语
+    if prompt_path.exists() {
+        info!("正在使用 {:?} 提示词文件, 进行代码审查...", prompt_path.display());
+        std::fs::read_to_string(prompt_path).unwrap_or_else(|_| {
+            DEFAULT_REVIEW_PROMPT.to_string()
+        })
+    } else {
+        DEFAULT_REVIEW_PROMPT.to_string()
+    }
+}
+
+const DEFAULT_REVIEW_PROMPT:&str = r#"您是一位专业的代码审查者，请对以下代码变更进行审查并给出中文评价。请着重关注：
 
 1. 代码质量：
    - 代码是否清晰易懂
@@ -149,8 +166,7 @@ fn get_review_prompt() -> String {
    - 权限检查
 
 请以"代码审查报告："开头，使用简洁的语言描述发现的问题和改进建议。如果代码符合最佳实践，也请给出正面的评价。
-"#)
-}
+"#;
 
 fn get_staged_changes() -> Result<String> {
     let output = Command::new("git")
