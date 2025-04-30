@@ -80,7 +80,9 @@ _git-commit-helper() {
                         '--message[用户对改动的描述]' \
                         '-a[自动添加所有已修改但未暂存的文件]' \
                         '--all[自动添加所有已修改但未暂存的文件]' \
-                        '--no-review[禁用当前提交的代码审查功能]'
+                        '--no-review[禁用当前提交的代码审查功能]' \
+                        '--no-translate[不翻译提交信息]' \
+                        '--only-chinese[仅保留中文提交信息]'
                     ;;
                 ai-review)
                     _arguments \

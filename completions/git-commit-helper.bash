@@ -128,6 +128,8 @@ _git_commit_helper() {
                     opts="$opts -m --message"
                     opts="$opts -a --all"
                     opts="$opts --no-review"
+                    opts="$opts --no-translate"
+                    opts="$opts --only-chinese"
                     ;;
             esac
             ;;
