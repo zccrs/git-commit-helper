@@ -1,5 +1,5 @@
 Name:           git-commit-helper
-Version:        0.4.2
+Version:        0.4.3
 Release:        1%{?dist}
 Summary:        帮助规范 git commit message 的工具
 
@@ -31,6 +31,8 @@ install -Dm644 completions/git-commit-helper.zsh %{buildroot}%{_datadir}/zsh/sit
 %{_datadir}/zsh/site-functions/_git-commit-helper
 
 %changelog
+* Tue Apr 30 2025 zccrs <zhangjide@deepin.org> - 0.4.3-1
+- Release version 0.4.3
 * Mon Apr 28 2025 zccrs <zhangjide@deepin.org> - 0.4.2-1
 - Release version 0.4.2
 * Mon Apr 28 2025 zccrs <zhangjide@deepin.org> - 0.4.1-1
