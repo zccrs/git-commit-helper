@@ -91,7 +91,7 @@ init_rustup() {
 
     # 设置默认工具链
     echo "设置默认工具链..."
-    if ! rustup toolchain install stable; then
+    if ! rustup toolchain install stable --no-self-update; then
         echo "警告: 无法安装 stable 工具链"
         return 1
     fi
@@ -130,7 +130,6 @@ install_rustup_via_apt() {
         return 1
     fi
 
-    init_rustup || return 1
     return 0
 }
 
@@ -146,7 +145,7 @@ install_rustup_from_web() {
         echo "使用 curl 下载..."
         curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
     fi
-    init_rustup || return 1
+    return 0
 }
 
 # 使用rustup安装rust
@@ -162,25 +161,18 @@ install_rust() {
         else
             install_rustup_from_web
         fi
-    fi
 
-    # 确保cargo环境变量文件存在且已加载
-    if [ -f "$HOME/.cargo/env" ]; then
-        source "$HOME/.cargo/env"
-    else
-        echo "等待 cargo 环境准备完成..."
-        sleep 2
-        if [ -f "$HOME/.cargo/env" ]; then
-            source "$HOME/.cargo/env"
-        else
-            echo "警告: cargo 环境文件未找到，cargo 命令可能无法使用"
+        # 检查rustup安装是否成功
+        if ! command -v rustup >/dev/null 2>&1; then
+            echo "错误: rustup 安装失败"
             return 1
         fi
+
+        init_rustup || return 1
     fi
 
-    echo "安装所需的 Rust 版本..."
-    rustup install 1.70.0
-    rustup default 1.70.0
+    echo "设置 Rust 默认版本..."
+    rustup default stable
 }
 
 # 在apt系统上检查并安装rust
@@ -209,9 +201,6 @@ mkdir -p ~/.local/bin
 cp ./target/release/git-commit-helper ~/.local/bin/
 chmod +x ~/.local/bin/git-commit-helper
 
-# 安装到当前 git 仓库
-~/.local/bin/git-commit-helper install --force
-
 echo "二进制文件已安装到: ~/.local/bin/git-commit-helper"
 echo "请运行以下命令完成配置:"
 echo "  git-commit-helper config"
@@ -230,6 +219,9 @@ echo "  zsh:  ~/.local/share/zsh/site-functions/_git-commit-helper"
 echo "请重新加载 shell 配置文件以启用补全功能"
 echo "  bash: source ~/.bashrc"
 echo "  zsh:  source ~/.zshrc"
+
+# 安装到当前 git 仓库
+~/.local/bin/git-commit-helper install --force
 
 echo "安装完成！"
 
