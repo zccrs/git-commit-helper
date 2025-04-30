@@ -714,9 +714,84 @@ impl Config {
                     model: if model.is_empty() { Some("copilot-chat".to_string()) } else { Some(model) },
                 });
             } else {
-                // 如果没有 API key，需要重新验证
-                // 使用 Box::pin 解决递归调用问题
-                return Box::pin(Config::input_service_config(AIService::Copilot)).await;
+                // 如果没有 API key，直接处理 Copilot 验证，而不是递归调用
+                println!("Copilot 服务需要 GitHub 身份验证...");
+
+                // 尝试获取 GitHub token
+                match get_github_token() {
+                    Ok(token) => {
+                        println!("✅ 已成功获取 GitHub 令牌");
+                        // 尝试连接 Copilot API 验证令牌
+                        let editor_version = "1.0.0".to_string();
+                        let client = CopilotClient::new_with_models(token.clone(), editor_version).await;
+                        match client {
+                            Ok(client) => {
+                                println!("✅ GitHub Copilot 认证成功！");
+                                // 获取可用模型
+                                let models = client.get_models().await?;
+                                if !models.is_empty() {
+                                    println!("\n可用模型:");
+                                    for (i, model) in models.iter().enumerate() {
+                                        println!("  {}. {} ({})", i+1, model.name, model.id);
+                                    }
+
+                                    // 让用户选择模型
+                                    let model_count = models.len();
+                                    let selection = Input::<String>::new()
+                                        .with_prompt("请选择要使用的模型编号 (留空使用默认)")
+                                        .allow_empty(true)
+                                        .validate_with(|input: &String| -> Result<(), &str> {
+                                            if input.is_empty() {
+                                                return Ok(());
+                                            }
+                                            match input.parse::<usize>() {
+                                                Ok(n) if n >= 1 && n <= model_count => Ok(()),
+                                                _ => Err("请输入有效的模型编号或留空")
+                                            }
+                                        })
+                                        .interact()?;
+
+                                    // 处理用户选择
+                                    let model_id = if selection.is_empty() {
+                                        "copilot-chat".to_string()
+                                    } else {
+                                        let idx = selection.parse::<usize>().unwrap() - 1;
+                                        models[idx].id.clone()
+                                    };
+
+                                    // 返回配置，使用用户选择的模型
+                                    return Ok(AIServiceConfig {
+                                        service: AIService::Copilot,
+                                        api_key: token,
+                                        api_endpoint: None,
+                                        model: Some(model_id),
+                                    });
+                                } else {
+                                    // 如果没有可用模型列表，使用默认模型
+                                    return Ok(AIServiceConfig {
+                                        service: AIService::Copilot,
+                                        api_key: token,
+                                        api_endpoint: None,
+                                        model: Some("copilot-chat".to_string()),
+                                    });
+                                }
+                            },
+                            Err(e) => {
+                                println!("❌ Copilot API 连接失败: {}", e);
+                                println!("请确保您已订阅 GitHub Copilot 服务并拥有有效权限。");
+                                return Err(anyhow::anyhow!("Copilot 认证失败"));
+                            }
+                        }
+                    },
+                    Err(e) => {
+                        println!("❌ 无法获取 GitHub 令牌: {}", e);
+                        println!("\n请按照以下步骤获取 GitHub 令牌:");
+                        println!("可使用QtCreator中的Copilot插件获取到copilot的token，或直接使用copilot.nvim在nvim中获取token：https://github.com/github/copilot.vim");
+                        println!("\n按回车键继续...");
+                        Term::stdout().read_line()?;
+                        return Err(anyhow::anyhow!("无法获取 GitHub 令牌"));
+                    }
+                }
             }
         }
 
