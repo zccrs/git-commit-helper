@@ -106,13 +106,6 @@ pub async fn review_changes(config: &Config, no_review: bool) -> Result<Option<S
         return Ok(None);
     }
 
-    // 获取当前改动的差异
-    let diff = get_staged_changes()?;
-    if diff.trim().is_empty() {
-        info!("没有检测到暂存的代码改动");
-        return Ok(None);
-    }
-
     // 使用配置的 AI 服务进行代码审查
     let translator = ai_service::create_translator(config).await?;
     info!("正在使用 {:?} 服务进行代码审查...", config.default_service);
