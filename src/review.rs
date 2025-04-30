@@ -128,7 +128,8 @@ fn get_review_prompt() -> String {
     // 如果文件存在则读取，否则使用默认提示语
     if prompt_path.exists() {
         info!("正在使用 {:?} 提示词文件, 进行代码审查...", prompt_path.display());
-        std::fs::read_to_string(prompt_path).unwrap_or_else(|_| {
+        std::fs::read_to_string(&prompt_path).unwrap_or_else(|err| {
+            log::error!("Failed to read review prompt file {:?}: {}", prompt_path.display(), err);
             DEFAULT_REVIEW_PROMPT.to_string()
         })
     } else {
