@@ -33,7 +33,11 @@ struct Cli {
 #[derive(Subcommand, PartialEq)]
 enum Commands {
     /// 配置 AI 服务
-    Config,
+    Config {
+        /// 设置默认是否只使用中文提交信息，true: 仅中文，false: 中英双语
+        #[arg(long = "set-only-chinese", help = "设置是否默认只使用中文提交信息，true: 仅中文，false: 中英双语")]
+        only_chinese: Option<bool>,
+    },
     /// 显示当前配置信息
     Show,
     /// 将工具安装到当前 git 仓库
@@ -105,20 +109,22 @@ enum ServiceCommands {
     /// 删除 AI 服务
     Remove,
     /// 设置默认 AI 服务
+    #[command(name = "set-default")]
     SetDefault,
-    /// 列出所有AI服务
-    List,
-    /// 测试指定的AI服务
-    Test {
-        /// 测试用的中文文本
-        #[arg(short, long, default_value = "这是一个测试消息。")]
-        text: String,
-    },
-    /// 设置网络请求超时时间（单位：秒）
+    /// 设置网络请求超时时间
+    #[command(name = "set-timeout")]
     SetTimeout {
-        /// 超时时间，单位为秒
+        /// 超时时间（单位：秒）
         #[arg(short, long)]
         seconds: u64,
+    },
+    /// 列出所有 AI 服务
+    List,
+    /// 测试指定的 AI 服务
+    Test {
+        /// 测试用的中文文本
+        #[arg(short, long)]
+        text: Option<String>,
     },
 }
 
@@ -156,7 +162,10 @@ async fn main() -> Result<()> {
             config
         }
         Err(e) => {
-            if cli.command != Some(Commands::Config) {
+            // 检查当前命令是否为 config，如果是则允许继续
+            if let Some(Commands::Config { .. }) = cli.command {
+                config::Config::new()
+            } else {
                 println!("错误: {}", e);
                 println!("未检测到有效的 AI 配置，需要先进行配置");
                 if Confirm::new()
@@ -168,14 +177,22 @@ async fn main() -> Result<()> {
                 }
                 return Err(anyhow::anyhow!("请先运行 'git-commit-helper config' 进行配置"));
             }
-            config::Config::new()
         }
     };
 
     match cli.command {
-        Some(Commands::Config) => {
-            config::Config::interactive_config().await?;
-            Ok(())
+        Some(Commands::Config { only_chinese }) => {
+            if let Some(only_chinese) = only_chinese {
+                let mut config = config::Config::load().unwrap_or_else(|_| config::Config::new());
+                config.only_chinese = only_chinese;
+                config.save()?;
+                println!("已将默认提交信息语言设置为: {}",
+                    if only_chinese { "仅中文" } else { "中英双语" });
+                Ok(())
+            } else {
+                config::Config::interactive_config().await?;
+                Ok(())
+            }
         }
         Some(Commands::Show) => {
             let config = config::Config::load()?;
@@ -284,12 +301,13 @@ async fn main() -> Result<()> {
                     println!("正在测试 {:?} 服务...", service.service);
 
                     let translator = ai_service::create_translator_for_service(service).await?;
+                    let test_text = text.unwrap_or_else(|| "这是一个测试消息，用于验证翻译功能是否正常。".to_string());
                     debug!("开始发送翻译请求");
-                    match translator.translate(&text).await {
+                    match translator.translate(&test_text).await {
                         Ok(result) => {
                             debug!("收到翻译响应");
                             println!("\n测试结果:");
-                            println!("原文: {}", text);
+                            println!("原文: {}", test_text);
                             if result.is_empty() {
                                 println!("警告: 收到空的翻译结果！");
                             }
@@ -355,6 +373,8 @@ async fn main() -> Result<()> {
             if status {
                 println!("AI 代码审查功能当前状态: {}",
                     if config.ai_review { "已启用" } else { "已禁用" });
+                println!("默认提交信息语言: {}",
+                    if config.only_chinese { "仅中文" } else { "中英双语" });
                 return Ok(());
             }
             if enable {

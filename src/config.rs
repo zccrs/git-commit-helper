@@ -20,6 +20,13 @@ pub struct Config {
     pub timeout_seconds: u64,  // 添加请求超时时间设置
     #[serde(default)]
     pub gerrit: Option<GerritConfig>,  // Gerrit 配置
+    #[serde(default = "default_only_chinese")]
+    pub only_chinese: bool,  // 是否默认只使用中文
+}
+
+// 添加默认值函数
+fn default_only_chinese() -> bool {
+    false
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone, Default)]
@@ -65,6 +72,7 @@ impl Config {
             ai_review: true,  // 默认开启
             timeout_seconds: default_timeout(),
             gerrit: None,
+            only_chinese: false,  // 默认关闭
         }
     }
 
@@ -260,6 +268,7 @@ impl Config {
             ai_review: true,  // 默认开启
             timeout_seconds: default_timeout(),
             gerrit: None,
+            only_chinese: false,  // 默认关闭
         };
 
         // 确保配置目录存在
@@ -286,6 +295,7 @@ impl Config {
                 ai_review: true,
                 timeout_seconds: config.timeout_seconds,
                 gerrit: None,
+                only_chinese: false,
             };
             let translator = ai_service::create_translator(&test_config).await?;
             match translator.translate("这是一个测试消息，用于验证翻译功能是否正常。").await {
@@ -457,6 +467,7 @@ impl Config {
                 ai_review: true,
                 timeout_seconds: self.timeout_seconds,
                 gerrit: None,
+                only_chinese: false,
             };
             let translator = ai_service::create_translator(&test_config).await?;
             let text = "这是一个测试消息，用于验证翻译功能是否正常。";

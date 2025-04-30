@@ -26,6 +26,9 @@ _git_commit_helper() {
             git_commit_helper,translate)
                 cmd="git_commit_helper__translate"
                 ;;
+            git_commit_helper,commit)
+                cmd="git_commit_helper__commit"
+                ;;
             git_commit_helper,ai-review)
                 cmd="git_commit_helper__ai_review"
                 ;;
@@ -57,7 +60,7 @@ _git_commit_helper() {
 
     case "${cmd}" in
         git_commit_helper)
-            opts="config show install service translate commit ai-review help"
+            opts="config show install ai translate commit ai-review help"
             if [[ ${cur} == -* ]] ; then
                 opts="--help -h --version -V"
             fi
@@ -65,7 +68,10 @@ _git_commit_helper() {
             return 0
             ;;
         git_commit_helper__config)
-            COMPREPLY=( $(compgen -W "" -- "${cur}") )
+            if [[ ${cur} == -* ]] ; then
+                opts="--set-only-chinese"
+            fi
+            COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
             return 0
             ;;
         git_commit_helper__show)
@@ -127,11 +133,11 @@ _git_commit_helper() {
                     opts="$opts -t --type"
                     opts="$opts -m --message"
                     opts="$opts -a --all"
-                    opts="$opts --no-review"
                     opts="$opts --no-translate"
                     opts="$opts --only-chinese"
-                    ;;
             esac
+            COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
+            return 0
             ;;
         git_commit_helper__ai_review)
             opts=""

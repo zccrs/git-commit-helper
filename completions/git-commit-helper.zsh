@@ -42,6 +42,10 @@ _git-commit-helper() {
                         '-f[强制安装]' \
                         '--force[强制安装]'
                     ;;
+                config)
+                    _arguments \
+                        '--set-only-chinese[设置是否默认只使用中文提交信息]'
+                    ;;
                 ai)
                     _values 'ai 命令' \
                         'add[添加新的 AI 服务]' \
@@ -80,15 +84,14 @@ _git-commit-helper() {
                         '--message[用户对改动的描述]' \
                         '-a[自动添加所有已修改但未暂存的文件]' \
                         '--all[自动添加所有已修改但未暂存的文件]' \
-                        '--no-review[禁用当前提交的代码审查功能]' \
                         '--no-translate[不翻译提交信息]' \
                         '--only-chinese[仅保留中文提交信息]'
                     ;;
                 ai-review)
                     _arguments \
-                        '--enable[启用 AI 代码审查]' \
-                        '--disable[禁用 AI 代码审查]' \
-                        '--status[显示当前 AI 代码审查状态]'
+                        '--enable[启用代码审查]' \
+                        '--disable[禁用代码审查]' \
+                        '--status[显示当前状态]'
                     ;;
             esac
             ;;

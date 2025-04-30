@@ -103,8 +103,14 @@ pub async fn generate_commit_message(
     auto_add: bool,
     no_review: bool,
     no_translate: bool,
-    only_chinese: bool,
+    mut only_chinese: bool,
 ) -> anyhow::Result<()> {
+    // 加载配置，如果指定了参数则使用参数值，否则使用配置中的默认值
+    if let Ok(config) = config::Config::load() {
+        if !only_chinese {
+            only_chinese = config.only_chinese;
+        }
+    }
     // 如果指定了 -a 参数，先执行 git add -u
     if auto_add {
         info!("自动添加已修改的文件...");

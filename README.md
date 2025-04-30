@@ -164,7 +164,7 @@ git-commit-helper translate /path/to/existing/file    # 文件路径
 
 | 命令 | 说明 | 示例 |
 |------|------|------|
-| config | 配置 AI 服务 | `git-commit-helper config` |
+| config | 配置 AI 服务 | `git-commit-helper config [--set-only-chinese <true|false>]` |
 | show | 显示当前配置 | `git-commit-helper show` |
 | install | 安装 Git Hook | `git-commit-helper install [-f]` |
 | ai add | 添加 AI 服务 | `git-commit-helper ai add` |
@@ -193,8 +193,9 @@ git-commit-helper translate /path/to/existing/file    # 文件路径
 ### 命令行参数
 
 ```bash
-# 全局选项
---no-review            暂时禁用当前提交的代码审查功能
+# 配置
+git-commit-helper config [选项]
+    --set-only-chinese <true|false>  设置默认是否只使用中文提交信息
 
 # 远程代码审查
 git-commit-helper <URL>
@@ -210,7 +211,7 @@ git-commit-helper <URL>
 # AI 代码审查管理
 git-commit-helper ai-review [选项]
     --enable           全局启用代码审查功能
-    --disable          全局禁用代码审查功能
+    --disable         全局禁用代码审查功能
     --status          查看代码审查功能的当前状态
 
 # 生成提交信息
@@ -239,7 +240,11 @@ git-commit-helper commit -a
 # 完整示例
 git-commit-helper commit --type fix --message "修复内存泄漏" -a
 
-# 仅使用中文提交信息
+# 设置默认使用中文
+git-commit-helper config --set-only-chinese true   # 默认仅使用中文
+git-commit-helper config --set-only-chinese false  # 默认使用中英双语
+
+# 单次提交使用中文
 git-commit-helper commit --type feat --message "添加新功能" --only-chinese
 ```
 
