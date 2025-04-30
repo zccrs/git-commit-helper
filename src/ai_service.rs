@@ -172,58 +172,25 @@ fn wrap_chinese_text(text: &str, max_width: usize) -> String {
 }
 
 fn get_translation_prompt(text: &str) -> String {
-    let prompt = if text.contains("diff --git") {
-        // Git diff 内容的提示语
-        String::from(
-            "Please analyze the git diff content and generate a detailed bilingual commit message with:
-            1. First line in English: type: message (under 50 characters)
-            2. Empty line after the title
-            3. Detailed explanation in English (what was changed and why)
-            4. Empty line after English explanation
-            5. Chinese title and explanation (translate the English content)
-            6. Type must be one of: feat/fix/docs/style/refactor/test/chore
-            7. Focus on both WHAT changed and WHY it was necessary
-            8. Include any important technical details or context
-            9. DO NOT wrap the response in any markdown or code block markers
+    let prompt = format!(
+    r#"You are a professional translator. Please translate the following Chinese text to English.
+    Important rules:
+    1. Keep all English content, numbers, and English punctuation unchanged
+    2. Do not translate any content inside English double quotes
+    3. Preserve the case of all English words
+    4. Only return the English translation, DO NOT include the original Chinese text
+    5. Keep simple and concise, no need to rewrite or expand the content
 
-            Example response format:
-            feat: add user authentication module
+    Example response format:
+    feat: add support for external plugins
 
-            1. Implement JWT-based authentication system
-            2. Add user login and registration endpoints
-            3. Include password hashing with bcrypt
-            4. Set up token refresh mechanism
+    1. Implement plugin loading mechanism
+    2. Add plugin configuration interface
+    3. Setup plugin discovery path: "/插件"
 
-            feat: 添加用户认证模块
-
-            1. 实现基于 JWT 的认证系统
-            2. 添加用户登录和注册端点
-            3. 包含使用 bcrypt 的密码哈希处理
-            4. 设置令牌刷新机制
-
-            Please respond with ONLY the commit message following this format,
-            DO NOT end commit titles with any punctuation.")
-    } else {
-        format!(
-        r#"You are a professional translator. Please translate the following Chinese text to English.
-        Important rules:
-        1. Keep all English content, numbers, and English punctuation unchanged
-        2. Do not translate any content inside English double quotes
-        3. Preserve the case of all English words
-        4. Only return the English translation, DO NOT include the original Chinese text
-        5. Keep simple and concise, no need to rewrite or expand the content
-
-        Example response format:
-        feat: add support for external plugins
-
-        1. Implement plugin loading mechanism
-        2. Add plugin configuration interface
-        3. Setup plugin discovery path: "/插件"
-
-        Text to translate:
-        {}"#,
-        wrap_chinese_text(text, 72))
-    };
+    Text to translate:
+    {}"#,
+    wrap_chinese_text(text, 72));
 
     debug!("生成的提示词:\n{}", prompt);
     prompt

@@ -103,6 +103,7 @@ pub async fn generate_commit_message(
     auto_add: bool,
     no_review: bool,
     no_translate: bool,
+    only_chinese: bool,
 ) -> anyhow::Result<()> {
     // 如果指定了 -a 参数，先执行 git add -u
     if auto_add {
@@ -116,7 +117,7 @@ pub async fn generate_commit_message(
         }
     }
 
-    // 设置不翻译的环境变量
+    // 设置环境变量
     if no_translate {
         std::env::set_var("GIT_COMMIT_HELPER_NO_TRANSLATE", "1");
     }
@@ -139,47 +140,106 @@ pub async fn generate_commit_message(
     // 设置环境变量标记跳过后续的代码审查
     std::env::set_var("GIT_COMMIT_HELPER_SKIP_REVIEW", "1");
 
-    let prompt = match message {
-        Some(msg) => format!(
-            "I will show you some git diff content and a user description. Please help me generate a standardized git commit message.\
-            Please output in plain text format without any markdown or other markup languages.\
-            The user description is the focus of this change, while git diff serves as a reference.\
-            Commit message format requirements:\
-            1. First line is the title, briefly explaining the changes\
-            2. Title should be concise, no more than 50 characters\
-            3. Title format: type: message, where type is the change type and message is the change description\
-            4. If a specific type is provided, it must be used\
-            5. If no type is provided, use one of the following types based on the changes:\
-               feat: new feature\
-               fix: bug fix\
-               docs: documentation changes\
-               style: code style adjustments\
-               refactor: code refactoring\
-               test: test related\
-               chore: build or auxiliary tool changes\
-            Note: Output should only contain plain text commit message, no format markers like markdown.\
-            \n\nUser Description:\n{}\n\nChanges:\n{}",
-            msg, diff
+    let prompt = match (message, only_chinese) {
+        (Some(msg), true) => format!(
+            "请分析以下 git diff 内容，并按照以下格式生成提交信息：\
+                1. 第一行为标题：type: message（不超过50个字符）\
+                2. 标题下方空一行\
+                3. 详细的中文说明（解释做了什么改动以及为什么需要这些改动）\
+                4. type 必须是以下之一：feat/fix/docs/style/refactor/test/chore\
+                5. 关注点：变更内容（做了什么）和变更原因（为什么）\
+                6. 包含重要的技术细节或上下文\
+                7. 不要使用任何 markdown 或代码块标记\
+                8. 标题结尾不要使用标点符号\
+            \n\n示例格式：\
+            feat: 添加用户认证模块\n\
+            1. 实现基于 JWT 的认证系统\n\
+            2. 添加用户登录和注册端点\n\
+            3. 包含使用 bcrypt 的密码哈希处理\n\
+            4. 设置令牌刷新机制
+            \n\n用户描述：\n{}\n\n变更内容：\n",
+            msg
         ),
-        None => format!(
-            "I will show you some git diff content. Please summarize these changes and generate a standardized git commit message.\
-            Please output in plain text format without any markdown or other markup languages.\
-            Commit message format requirements:\
-            1. First line is the title, briefly explaining the changes\
-            2. Title should be concise, no more than 50 characters\
-            3. Title format: type: message, where type is the change type and message is the change description\
-            4. If a specific type is provided, it must be used\
-            5. If no type is provided, use one of the following types based on the changes:\
-               feat: new feature\
-               fix: bug fix\
-               docs: documentation changes\
-               style: code style adjustments\
-               refactor: code refactoring\
-               test: test related\
-               chore: build or auxiliary tool changes\
-            Note: Output should only contain plain text commit message, no format markers like markdown.\
-            \n\nHere are the changes:\n{}",
-            diff
+        (None, true) => format!(
+            "请分析以下 git diff 内容，并按照以下格式生成提交信息：\
+                1. 第一行为标题：type: message（不超过50个字符）\
+                2. 标题下方空一行\
+                3. 详细的中文说明（解释做了什么改动以及为什么需要这些改动）\
+                4. type 必须是以下之一：feat/fix/docs/style/refactor/test/chore\
+                5. 关注点：变更内容（做了什么）和变更原因（为什么）\
+                6. 包含重要的技术细节或上下文\
+                7. 不要使用任何 markdown 或代码块标记\
+                8. 标题结尾不要使用标点符号\
+            \n\n示例格式：\
+            feat: 添加用户认证模块\n\
+            1. 实现基于 JWT 的认证系统\n\
+            2. 添加用户登录和注册端点\n\
+            3. 包含使用 bcrypt 的密码哈希处理\n\
+            4. 设置令牌刷新机制
+            \n\n变更内容：\n"
+        ),
+        (Some(msg), false) => format!(
+            "Please analyze the git diff content and generate a detailed bilingual commit message with:
+                1. First line in English: type: message (under 50 characters)
+                2. Empty line after the title
+                3. Detailed explanation in English (what was changed and why)
+                4. Empty line after English explanation
+                5. Chinese title and explanation (translate the English content)
+                6. Type must be one of: feat/fix/docs/style/refactor/test/chore
+                7. Focus on both WHAT changed and WHY it was necessary
+                8. Include any important technical details or context
+                9. DO NOT wrap the response in any markdown or code block markers
+
+                Example response format:
+                feat: add user authentication module
+
+                1. Implement JWT-based authentication system
+                2. Add user login and registration endpoints
+                3. Include password hashing with bcrypt
+                4. Set up token refresh mechanism
+
+                feat: 添加用户认证模块
+
+                1. 实现基于 JWT 的认证系统
+                2. 添加用户登录和注册端点
+                3. 包含使用 bcrypt 的密码哈希处理
+                4. 设置令牌刷新机制
+
+                Please respond with ONLY the commit message following this format,
+                DO NOT end commit titles with any punctuation.
+            \n\nUser Description:\n{}\n\nChanges:\n",
+            msg
+        ),
+        (None, false) => format!(
+            "Please analyze the git diff content and generate a detailed bilingual commit message with:
+                1. First line in English: type: message (under 50 characters)
+                2. Empty line after the title
+                3. Detailed explanation in English (what was changed and why)
+                4. Empty line after English explanation
+                5. Chinese title and explanation (translate the English content)
+                6. Type must be one of: feat/fix/docs/style/refactor/test/chore
+                7. Focus on both WHAT changed and WHY it was necessary
+                8. Include any important technical details or context
+                9. DO NOT wrap the response in any markdown or code block markers
+
+                Example response format:
+                feat: add user authentication module
+
+                1. Implement JWT-based authentication system
+                2. Add user login and registration endpoints
+                3. Include password hashing with bcrypt
+                4. Set up token refresh mechanism
+
+                feat: 添加用户认证模块
+
+                1. 实现基于 JWT 的认证系统
+                2. 添加用户登录和注册端点
+                3. 包含使用 bcrypt 的密码哈希处理
+                4. 设置令牌刷新机制
+
+                Please respond with ONLY the commit message following this format,
+                DO NOT end commit titles with any punctuation.
+            \n\nHere are the changes:\n"
         )
     };
 
@@ -190,10 +250,7 @@ pub async fn generate_commit_message(
     let translator = ai_service::create_translator_for_service(service).await?;
 
     println!("\n正在生成提交信息建议...");
-    let mut message = translator.translate(&prompt).await?.to_string();
-
-    // 移除各种 AI 返回的元信息标记
-    message = message
+    let mut message = translator.chat(&prompt, &diff).await?
         .trim_start_matches("[NO_TRANSLATE]")
         .trim_start_matches("、、、plaintext")
         .trim()
