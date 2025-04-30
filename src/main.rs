@@ -77,6 +77,9 @@ enum Commands {
         /// 不翻译提交信息
         #[arg(long)]
         no_translate: bool,
+        /// 仅保留中文提交信息
+        #[arg(long = "only-chinese")]
+        only_chinese: bool,
     },
     /// 管理 AI 代码审查功能
     #[command(name = "ai-review")]
@@ -344,8 +347,8 @@ async fn main() -> Result<()> {
                 Err(e) => Err(e)
             }
         }
-        Some(Commands::Commit { r#type, message, all, no_translate }) => {
-            commit::generate_commit_message(r#type, message, all, cli.no_review, no_translate).await
+        Some(Commands::Commit { r#type, message, all, no_translate, only_chinese }) => {
+            commit::generate_commit_message(r#type, message, all, cli.no_review, no_translate, only_chinese).await
         }
         Some(Commands::AIReview { enable, disable, status }) => {
             let mut config = config::Config::load()?;

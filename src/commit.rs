@@ -103,6 +103,7 @@ pub async fn generate_commit_message(
     auto_add: bool,
     no_review: bool,
     no_translate: bool,
+    only_chinese: bool,
 ) -> anyhow::Result<()> {
     // 如果指定了 -a 参数，先执行 git add -u
     if auto_add {
@@ -116,9 +117,12 @@ pub async fn generate_commit_message(
         }
     }
 
-    // 设置不翻译的环境变量
+    // 设置环境变量
     if no_translate {
         std::env::set_var("GIT_COMMIT_HELPER_NO_TRANSLATE", "1");
+    }
+    if only_chinese {
+        std::env::set_var("GIT_COMMIT_HELPER_ONLY_CHINESE", "1");
     }
 
     let diff = get_staged_diff()?;
@@ -139,8 +143,49 @@ pub async fn generate_commit_message(
     // 设置环境变量标记跳过后续的代码审查
     std::env::set_var("GIT_COMMIT_HELPER_SKIP_REVIEW", "1");
 
-    let prompt = match message {
-        Some(msg) => format!(
+    let prompt = match (message, only_chinese) {
+        (Some(msg), true) => format!(
+            "我将为您展示一些 git diff 内容和用户描述，请帮我生成一个标准化的 git commit 信息。\
+            请使用纯文本格式输出，不要使用任何 markdown 或其他标记语言。\
+            用户描述是本次更改的重点，git diff 作为参考。\
+            提交信息格式要求：\
+            1. 第一行是标题，简要说明变更内容\
+            2. 标题应简洁，不超过50个字符\
+            3. 标题格式：type: message，其中 type 是变更类型，message 是变更描述\
+            4. 如果提供了具体的 type，必须使用该 type\
+            5. 如果没有提供 type，请根据变更内容使用以下类型之一：\
+               feat: 新功能\
+               fix: 问题修复\
+               docs: 文档更新\
+               style: 代码格式调整\
+               refactor: 代码重构\
+               test: 测试相关\
+               chore: 构建或辅助工具变更\
+            注意：输出应只包含纯文本提交信息，不要包含格式标记。\
+            \n\n用户描述：\n{}\n\n变更内容：\n{}",
+            msg, diff
+        ),
+        (None, true) => format!(
+            "我将为您展示一些 git diff 内容，请总结这些变更并生成一个标准化的 git commit 信息。\
+            请使用纯文本格式输出，不要使用任何 markdown 或其他标记语言。\
+            提交信息格式要求：\
+            1. 第一行是标题，简要说明变更内容\
+            2. 标题应简洁，不超过50个字符\
+            3. 标题格式：type: message，其中 type 是变更类型，message 是变更描述\
+            4. 如果提供了具体的 type，必须使用该 type\
+            5. 如果没有提供 type，请根据变更内容使用以下类型之一：\
+               feat: 新功能\
+               fix: 问题修复\
+               docs: 文档更新\
+               style: 代码格式调整\
+               refactor: 代码重构\
+               test: 测试相关\
+               chore: 构建或辅助工具变更\
+            注意：输出应只包含纯文本提交信息，不要包含格式标记。\
+            \n\n变更内容：\n{}",
+            diff
+        ),
+        (Some(msg), false) => format!(
             "I will show you some git diff content and a user description. Please help me generate a standardized git commit message.\
             Please output in plain text format without any markdown or other markup languages.\
             The user description is the focus of this change, while git diff serves as a reference.\
@@ -161,7 +206,7 @@ pub async fn generate_commit_message(
             \n\nUser Description:\n{}\n\nChanges:\n{}",
             msg, diff
         ),
-        None => format!(
+        (None, false) => format!(
             "I will show you some git diff content. Please summarize these changes and generate a standardized git commit message.\
             Please output in plain text format without any markdown or other markup languages.\
             Commit message format requirements:\
@@ -190,10 +235,7 @@ pub async fn generate_commit_message(
     let translator = ai_service::create_translator_for_service(service).await?;
 
     println!("\n正在生成提交信息建议...");
-    let mut message = translator.translate(&prompt).await?.to_string();
-
-    // 移除各种 AI 返回的元信息标记
-    message = message
+    let mut message = translator.translate(&prompt).await?
         .trim_start_matches("[NO_TRANSLATE]")
         .trim_start_matches("、、、plaintext")
         .trim()
@@ -240,6 +282,7 @@ pub async fn generate_commit_message(
     // 清理环境变量（无论命令是否执行成功）
     std::env::remove_var("GIT_COMMIT_HELPER_SKIP_REVIEW");
     std::env::remove_var("GIT_COMMIT_HELPER_NO_TRANSLATE");
+    std::env::remove_var("GIT_COMMIT_HELPER_ONLY_CHINESE");
 
     if !status.success() {
         return Err(anyhow::anyhow!("git commit 命令执行失败"));

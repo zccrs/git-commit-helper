@@ -219,6 +219,7 @@ git-commit-helper commit [选项]
     -m, --message <MSG>       提供对改动的描述 (可选)
     -a, --all                 自动添加所有已修改但未暂存的文件
     --no-review              禁用当前提交的代码审查功能
+    --only-chinese           仅保留中文提交信息
 ```
 
 示例：
@@ -237,6 +238,9 @@ git-commit-helper commit -a
 
 # 完整示例
 git-commit-helper commit --type fix --message "修复内存泄漏" -a
+
+# 仅使用中文提交信息
+git-commit-helper commit --type feat --message "添加新功能" --only-chinese
 ```
 
 ### AI 代码审查功能

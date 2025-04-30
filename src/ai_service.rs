@@ -13,8 +13,11 @@ use copilot_client::CopilotClient;
 #[async_trait]
 pub trait AiService: Send + Sync {
     async fn translate(&self, text: &str) -> anyhow::Result<String> {
+        // 检查是否设置了只保留中文的环境变量
+        let only_chinese = std::env::var("GIT_COMMIT_HELPER_ONLY_CHINESE").is_ok();
+
         // 使用翻译的 prompt
-        let system_prompt = get_translation_prompt(text);
+        let system_prompt = get_translation_prompt(text, only_chinese);
         Ok(self.chat(&system_prompt, text).await?)
     }
 
@@ -171,38 +174,56 @@ fn wrap_chinese_text(text: &str, max_width: usize) -> String {
     result
 }
 
-fn get_translation_prompt(text: &str) -> String {
+fn get_translation_prompt(text: &str, only_chinese: bool) -> String {
     let prompt = if text.contains("diff --git") {
         // Git diff 内容的提示语
-        String::from(
-            "Please analyze the git diff content and generate a detailed bilingual commit message with:
-            1. First line in English: type: message (under 50 characters)
-            2. Empty line after the title
-            3. Detailed explanation in English (what was changed and why)
-            4. Empty line after English explanation
-            5. Chinese title and explanation (translate the English content)
-            6. Type must be one of: feat/fix/docs/style/refactor/test/chore
-            7. Focus on both WHAT changed and WHY it was necessary
-            8. Include any important technical details or context
-            9. DO NOT wrap the response in any markdown or code block markers
+        if only_chinese {
+            String::from("请分析以下 git diff 内容，并按照以下格式生成提交信息：\
+                1. 第一行为标题：type: message（不超过50个字符）\
+                2. 标题下方空一行\
+                3. 详细的中文说明（解释做了什么改动以及为什么需要这些改动）\
+                4. type 必须是以下之一：feat/fix/docs/style/refactor/test/chore\
+                5. 关注点：变更内容（做了什么）和变更原因（为什么）\
+                6. 包含重要的技术细节或上下文\
+                7. 不要使用任何 markdown 或代码块标记\
+                8. 标题结尾不要使用标点符号\
+            \n\n示例格式：\
+            feat: 添加用户认证模块\n\
+            1. 实现基于 JWT 的认证系统\n\
+            2. 添加用户登录和注册端点\n\
+            3. 包含使用 bcrypt 的密码哈希处理\n\
+            4. 设置令牌刷新机制")
+        } else {
+            String::from(
+                "Please analyze the git diff content and generate a detailed bilingual commit message with:
+                1. First line in English: type: message (under 50 characters)
+                2. Empty line after the title
+                3. Detailed explanation in English (what was changed and why)
+                4. Empty line after English explanation
+                5. Chinese title and explanation (translate the English content)
+                6. Type must be one of: feat/fix/docs/style/refactor/test/chore
+                7. Focus on both WHAT changed and WHY it was necessary
+                8. Include any important technical details or context
+                9. DO NOT wrap the response in any markdown or code block markers
 
-            Example response format:
-            feat: add user authentication module
+                Example response format:
+                feat: add user authentication module
 
-            1. Implement JWT-based authentication system
-            2. Add user login and registration endpoints
-            3. Include password hashing with bcrypt
-            4. Set up token refresh mechanism
+                1. Implement JWT-based authentication system
+                2. Add user login and registration endpoints
+                3. Include password hashing with bcrypt
+                4. Set up token refresh mechanism
 
-            feat: 添加用户认证模块
+                feat: 添加用户认证模块
 
-            1. 实现基于 JWT 的认证系统
-            2. 添加用户登录和注册端点
-            3. 包含使用 bcrypt 的密码哈希处理
-            4. 设置令牌刷新机制
+                1. 实现基于 JWT 的认证系统
+                2. 添加用户登录和注册端点
+                3. 包含使用 bcrypt 的密码哈希处理
+                4. 设置令牌刷新机制
 
-            Please respond with ONLY the commit message following this format,
-            DO NOT end commit titles with any punctuation.")
+                Please respond with ONLY the commit message following this format,
+                DO NOT end commit titles with any punctuation.")
+        }
     } else {
         format!(
         r#"You are a professional translator. Please translate the following Chinese text to English.
