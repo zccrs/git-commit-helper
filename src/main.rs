@@ -21,8 +21,8 @@ struct Cli {
     #[command(subcommand)]
     command: Option<Commands>,
 
-    /// Git commit message file path 或 GitHub/Gerrit URL
-    #[arg(help = "Git commit message file path or GitHub/Gerrit URL")]
+    /// Git commit message file path 或 GitHub/Gerrit URL 或 commit id
+    #[arg(help = "Git commit message file path or GitHub/Gerrit URL or commit id (7-40 chars)")]
     input: Option<String>,
 
     /// 禁用代码审查功能
@@ -405,6 +405,21 @@ async fn main() -> Result<()> {
                         Err(e) => Err(e)
                     }
                 }
+                Some(input) if input.len() >= 7 && input.len() <= 40 && input.chars().all(|c| c.is_ascii_hexdigit()) => {
+                    // 处理Git commit id
+                    let config = config::Config::load()?;
+                    if config.services.is_empty() {
+                        return Err(anyhow::anyhow!("没有配置任何 AI 服务，请先添加服务"));
+                    }
+
+                    match review::review_local_commit(&config, &input).await {
+                        Ok(review) => {
+                            println!("\n{}\n", review);
+                            Ok(())
+                        }
+                        Err(e) => Err(e)
+                    }
+                }
                 Some(path) => {
                     // 处理Git commit message文件
                     let path = PathBuf::from(path);
@@ -412,7 +427,7 @@ async fn main() -> Result<()> {
                     git::process_commit_msg(&path, no_review).await
                 }
                 None => {
-                    Err(anyhow::anyhow!("Missing input: expected commit message file path or GitHub/Gerrit URL"))
+                    Err(anyhow::anyhow!("Missing input: expected commit message file path or GitHub/Gerrit URL or commit id (7-40 chars)"))
                 }
             }
         }
