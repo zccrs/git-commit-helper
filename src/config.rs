@@ -18,6 +18,8 @@ pub struct Config {
     pub ai_review: bool,  // 添加 AI Review 开关
     #[serde(default = "default_timeout")]
     pub timeout_seconds: u64,  // 添加请求超时时间设置
+    #[serde(default = "default_max_tokens")]
+    pub max_tokens: u64,  // 添加响应的最大 token
     #[serde(default)]
     pub gerrit: Option<GerritConfig>,  // Gerrit 配置
     #[serde(default = "default_only_chinese")]
@@ -46,6 +48,11 @@ fn default_timeout() -> u64 {
     20
 }
 
+// 添加响应的最大token
+fn default_max_tokens() -> u64 {
+    2048
+}
+
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct AIServiceConfig {
     pub service: AIService,
@@ -71,6 +78,7 @@ impl Config {
             services: Vec::new(),
             ai_review: true,  // 默认开启
             timeout_seconds: default_timeout(),
+            max_tokens: default_max_tokens(),
             gerrit: None,
             only_chinese: false,  // 默认关闭
         }
@@ -267,6 +275,7 @@ impl Config {
             services,
             ai_review: true,  // 默认开启
             timeout_seconds: default_timeout(),
+            max_tokens: default_max_tokens(),
             gerrit: None,
             only_chinese: false,  // 默认关闭
         };
@@ -294,6 +303,7 @@ impl Config {
                 services: vec![config.services[default_index - 1].clone()],
                 ai_review: true,
                 timeout_seconds: config.timeout_seconds,
+                max_tokens: config.max_tokens,
                 gerrit: None,
                 only_chinese: false,
             };
@@ -466,6 +476,7 @@ impl Config {
                 services: vec![config.clone()],
                 ai_review: true,
                 timeout_seconds: self.timeout_seconds,
+                max_tokens: self.max_tokens,
                 gerrit: None,
                 only_chinese: false,
             };

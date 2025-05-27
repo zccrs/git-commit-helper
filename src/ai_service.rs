@@ -28,6 +28,7 @@ pub struct DeepSeekTranslator {
     endpoint: String,
     model: String,
     timeout_seconds: u64,
+    max_tokens: u64,
 }
 
 pub struct OpenAITranslator {
@@ -74,6 +75,9 @@ impl DeepSeekTranslator {
             timeout_seconds: crate::config::Config::load()
                 .map(|c| c.timeout_seconds)
                 .unwrap_or(20),
+            max_tokens: crate::config::Config::load()
+                .map(|c| c.max_tokens)
+                .unwrap_or(2048),
         }
     }
 }
@@ -218,7 +222,8 @@ impl AiService for DeepSeekTranslator {
         debug!("发送给 DeepSeek 的消息:\n{}", serde_json::to_string_pretty(&messages)?);
         let body = serde_json::json!({
             "model": self.model,
-            "messages": messages
+            "messages": messages,
+            "max_tokens": self.max_tokens
         });
 
         loop {
