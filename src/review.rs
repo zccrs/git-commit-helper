@@ -186,3 +186,36 @@ pub fn should_skip_review(message: &str) -> bool {
     message.starts_with("Cherry-pick") ||
     message.starts_with("Revert")
 }
+
+pub async fn review_local_commit(config: &Config, commit_id: &str) -> Result<String> {
+    debug!("开始审查本地commit: {}", commit_id);
+
+    // 获取diff内容
+    let diff = get_commit_diff(commit_id)?;
+
+    if diff.trim().is_empty() {
+        return Err(anyhow::anyhow!("未发现任何代码改动"));
+    }
+
+    // 代码审查
+    info!("正在使用 {:?} 服务进行代码审查...", config.default_service);
+    let mut review = String::new();
+    let translator = ai_service::create_translator(config).await?;
+    let system_prompt = get_review_prompt();
+    let review_result = translator.chat(&system_prompt, &diff).await?;
+    review.push_str(&review_result);
+
+    Ok(review)
+}
+
+fn get_commit_diff(commit_id: &str) -> Result<String> {
+    let output = Command::new("git")
+        .args(&["show", "--pretty=format:", commit_id])
+        .output()?;
+
+    if !output.status.success() {
+        return Err(anyhow::anyhow!("获取commit差异失败"));
+    }
+
+    Ok(String::from_utf8(output.stdout)?)
+}
