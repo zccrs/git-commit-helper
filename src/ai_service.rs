@@ -597,7 +597,14 @@ impl AiService for QwenTranslator {
         debug!("发送给 Qwen 的消息:\n{}", serde_json::to_string_pretty(&messages)?);
         let body = serde_json::json!({
             "model": self.model,
-            "messages": messages
+            "messages": messages,
+            // temperature 控制输出的随机性，范围 0-1
+            // 设置为 0.1 使输出更加确定和集中，减少不必要的发散
+            "temperature": 0.1,
+            // max_tokens 限制生成文本的最大长度
+            // 对于提交信息翻译来说，256 tokens 足够用了
+            // 限制长度可以显著提升响应速度
+            "max_tokens": 256
         });
 
         loop {
