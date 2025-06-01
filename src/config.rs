@@ -69,6 +69,7 @@ pub enum AIService {
     Copilot,
     Gemini,  // 新增
     Grok,    // 新增
+    Qwen,    // 新增
 }
 
 impl Config {
@@ -819,6 +820,7 @@ impl Config {
             AIService::Copilot => "",  // Copilot 不需要 endpoint
             AIService::Gemini => "https://generativelanguage.googleapis.com/v1beta",
             AIService::Grok => "https://api.x.ai/v1",
+            AIService::Qwen => "https://dashscope.aliyuncs.com/compatible-mode/v1",
         };
         let api_endpoint: String = Input::new()
             .with_prompt(format!("请输入 API Endpoint (可选，直接回车使用默认值) [{}]", default_endpoint))
@@ -833,6 +835,7 @@ impl Config {
             AIService::Copilot => "copilot-chat",
             AIService::Gemini => "gemini-pro",
             AIService::Grok => "grok-3-latest",
+            AIService::Qwen => "qwen-plus",
         };
         let model: String = Input::new()
             .with_prompt(format!("请输入模型名称 (可选，直接回车使用默认值) [{}]", default_model_name))

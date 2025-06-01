@@ -64,6 +64,13 @@ pub struct GrokTranslator {
     timeout_seconds: u64,
 }
 
+pub struct QwenTranslator {
+    api_key: String,
+    endpoint: String,
+    model: String,
+    timeout_seconds: u64,
+}
+
 impl DeepSeekTranslator {
     pub fn new(config: &AIServiceConfig) -> Self {
         Self {
@@ -141,6 +148,21 @@ impl GrokTranslator {
                 .unwrap_or_else(|| "https://api.x.ai/v1".into()),
             model: config.model.clone()
                 .unwrap_or_else(|| "grok-3-latest".into()),
+            timeout_seconds: crate::config::Config::load()
+                .map(|c| c.timeout_seconds)
+                .unwrap_or(20),
+        }
+    }
+}
+
+impl QwenTranslator {
+    pub fn new(config: &AIServiceConfig) -> Self {
+        Self {
+            api_key: config.api_key.clone(),
+            endpoint: config.api_endpoint.clone()
+                .unwrap_or_else(|| "https://dashscope.aliyuncs.com/compatible-mode/v1".into()),
+            model: config.model.clone()
+                .unwrap_or_else(|| "qwen-plus".into()),
             timeout_seconds: crate::config::Config::load()
                 .map(|c| c.timeout_seconds)
                 .unwrap_or(20),
@@ -553,6 +575,73 @@ impl AiService for GrokTranslator {
     }
 }
 
+#[async_trait]
+impl AiService for QwenTranslator {
+    async fn chat(&self, system_prompt: &str, user_content: &str) -> anyhow::Result<String> {
+        debug!("使用 Qwen，API Endpoint: {}", self.endpoint);
+        let client = reqwest::Client::builder()
+            .timeout(std::time::Duration::from_secs(self.timeout_seconds))
+            .build()?;
+
+        let url = format!("{}/chat/completions", self.endpoint);
+        let messages = vec![
+            serde_json::json!({
+                "role": "system",
+                "content": system_prompt
+            }),
+            serde_json::json!({
+                "role": "user",
+                "content": user_content
+            })
+        ];
+        debug!("发送给 Qwen 的消息:\n{}", serde_json::to_string_pretty(&messages)?);
+        let body = serde_json::json!({
+            "model": self.model,
+            "messages": messages
+        });
+
+        loop {
+            match client
+                .post(&url)
+                .header("Authorization", format!("Bearer {}", self.api_key))
+                .json(&body)
+                .send()
+                .await
+            {
+                Ok(response) => {
+                    debug!("收到响应: {:#?}", response);
+
+                    if !response.status().is_success() {
+                        let error_json = response.json::<serde_json::Value>().await?;
+                        debug!("响应内容: {}", serde_json::to_string_pretty(&error_json)?);
+                        return Err(anyhow::anyhow!("API 调用失败: {}",
+                            error_json["error"]["message"].as_str().unwrap_or("未知错误")));
+                    }
+
+                    let result = response.json::<serde_json::Value>().await?;
+                    debug!("响应内容: {}", serde_json::to_string_pretty(&result)?);
+
+                    let response = result["choices"][0]["message"]["content"]
+                        .as_str()
+                        .unwrap_or_default();
+                    return Ok(response.to_string());
+                }
+                Err(e) if e.is_timeout() => {
+                    warn!("请求超时: {}", e);
+                    if !Confirm::with_theme(&dialoguer::theme::ColorfulTheme::default())
+                        .with_prompt("请求超时，是否重试？")
+                        .default(true)
+                        .interact()? {
+                        return Err(anyhow::anyhow!("请求超时"));
+                    }
+                    continue;
+                }
+                Err(e) => return Err(e.into()),
+            }
+        }
+    }
+}
+
 pub async fn create_translator(config: &Config) -> anyhow::Result<Box<dyn Translator>> {
     info!("创建 {:?} AI服务", config.default_service);
     let service_config = config.services.iter()
@@ -675,6 +764,11 @@ pub async fn create_translator_for_service(service_config: &AIServiceConfig) -> 
         },
         AIService::Grok => {
             let mut translator = GrokTranslator::new(service_config);
+            translator.timeout_seconds = timeout;
+            Box::new(translator)
+        },
+        AIService::Qwen => {
+            let mut translator = QwenTranslator::new(service_config);
             translator.timeout_seconds = timeout;
             Box::new(translator)
         },

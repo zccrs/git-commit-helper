@@ -229,14 +229,15 @@ async fn main() -> Result<()> {
                         println!("4) Copilot");
                         println!("5) Gemini");
                         println!("6) Grok");
+                        println!("7) Qwen");
 
                         let selection = Input::<String>::new()
                             .with_prompt("请输入对应的数字")
                             .report(true)
                             .validate_with(|input: &String| -> Result<(), &str> {
                                 match input.parse::<usize>() {
-                                    Ok(n) if n >= 1 && n <= 6 => Ok(()),
-                                    _ => Err("请输入 1-6 之间的数字")
+                                    Ok(n) if n >= 1 && n <= 7 => Ok(()),
+                                    _ => Err("请输入 1-7 之间的数字")
                                 }
                             })
                             .interact()?
@@ -249,6 +250,7 @@ async fn main() -> Result<()> {
                             4 => AIService::Copilot,
                             5 => AIService::Gemini,
                             6 => AIService::Grok,
+                            7 => AIService::Qwen,
                             _ => unreachable!(),
                         }
                     };
