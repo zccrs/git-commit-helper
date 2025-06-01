@@ -22,6 +22,7 @@
   - Github Copilot (已测试)
   - Google Gemini (已测试)
   - Grok (已测试)
+  - Qwen (已测试)
 
   > 注意：目前仅 Claude 服务尚未经过完整测试。如果您在使用此服务时遇到问题，欢迎反馈。
 
