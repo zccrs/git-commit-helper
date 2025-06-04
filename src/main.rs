@@ -130,6 +130,10 @@ enum ServiceCommands {
 
 #[tokio::main]
 async fn main() -> Result<()> {
+    // Add dynamic completion support
+    clap_complete::CompleteEnv::with_factory(<Cli as clap::CommandFactory>::command)
+        .complete();
+
     let default_level = if cfg!(debug_assertions) { "debug" } else { "info" };
     env_logger::Builder::from_env(env_logger::Env::default().default_filter_or(default_level))
         .format_timestamp(None)

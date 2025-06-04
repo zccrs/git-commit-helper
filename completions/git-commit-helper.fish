@@ -1,0 +1,1 @@
+source (COMPLETE=fish git-commit-helper | psub) 
