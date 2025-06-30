@@ -2,6 +2,130 @@ use regex::Regex;
 use crate::ai_service;
 use crate::config;
 
+// 语言模式枚举
+#[derive(Debug, Clone, Copy)]
+enum LanguageMode {
+    ChineseOnly,
+    EnglishOnly,
+    Bilingual,
+}
+
+// 提示词模板常量
+const ENGLISH_PROMPT_TEMPLATE: &str = r#"Please analyze the git diff content and generate a commit message in English only:
+1. First line: type: message (under 50 characters)
+2. Empty line after the title
+3. Detailed explanation in English (what was changed and why)
+4. Type must be one of: feat/fix/docs/style/refactor/test/chore
+5. Focus on both WHAT changed and WHY it was necessary
+6. Include any important technical details or context
+7. DO NOT include any Chinese content
+8. DO NOT wrap the response in any markdown or code block markers
+
+Example response format:
+feat: add user authentication module
+
+1. Implement JWT-based authentication system
+2. Add user login and registration endpoints
+3. Include password hashing with bcrypt
+4. Set up token refresh mechanism
+
+Please respond with ONLY the commit message following this format,
+DO NOT end commit titles with any punctuation."#;
+
+const CHINESE_PROMPT_TEMPLATE: &str = r#"请分析以下 git diff 内容，并按照以下格式生成提交信息：
+1. 第一行为标题：type: message（不超过50个字符）
+2. 标题下方空一行
+3. 详细的中文说明（解释做了什么改动以及为什么需要这些改动）
+4. type 必须是以下之一：feat/fix/docs/style/refactor/test/chore
+5. 关注点：变更内容（做了什么）和变更原因（为什么）
+6. 包含重要的技术细节或上下文
+7. 不要使用任何 markdown 或代码块标记
+8. 标题结尾不要使用标点符号
+
+示例格式：
+feat: 添加用户认证模块
+
+1. 实现基于 JWT 的认证系统
+2. 添加用户登录和注册端点
+3. 包含使用 bcrypt 的密码哈希处理
+4. 设置令牌刷新机制"#;
+
+const BILINGUAL_PROMPT_TEMPLATE: &str = r#"Please analyze the git diff content and generate a detailed bilingual commit message with:
+1. First line in English: type: message (under 50 characters)
+2. Empty line after the title
+3. Detailed explanation in English (what was changed and why)
+4. Empty line after English explanation
+5. Chinese title and explanation (translate the English content)
+6. Type must be one of: feat/fix/docs/style/refactor/test/chore
+7. Focus on both WHAT changed and WHY it was necessary
+8. Include any important technical details or context
+9. DO NOT wrap the response in any markdown or code block markers
+
+Example response format:
+feat: add user authentication module
+
+1. Implement JWT-based authentication system
+2. Add user login and registration endpoints
+3. Include password hashing with bcrypt
+4. Set up token refresh mechanism
+
+feat: 添加用户认证模块
+
+1. 实现基于 JWT 的认证系统
+2. 添加用户登录和注册端点
+3. 包含使用 bcrypt 的密码哈希处理
+4. 设置令牌刷新机制
+
+Please respond with ONLY the commit message following this format,
+DO NOT end commit titles with any punctuation."#;
+
+impl LanguageMode {
+    fn determine(only_chinese: bool, only_english: bool) -> Self {
+        if only_english {
+            Self::EnglishOnly
+        } else if only_chinese {
+            Self::ChineseOnly
+        } else {
+            Self::Bilingual
+        }
+    }
+
+    fn template(&self) -> &'static str {
+        match self {
+            Self::EnglishOnly => ENGLISH_PROMPT_TEMPLATE,
+            Self::ChineseOnly => CHINESE_PROMPT_TEMPLATE,
+            Self::Bilingual => BILINGUAL_PROMPT_TEMPLATE,
+        }
+    }
+}
+
+// 统一的提示词构建函数
+fn build_prompt(mode: LanguageMode, user_message: Option<&str>) -> String {
+    let mut prompt = String::from(mode.template());
+    
+    if let Some(msg) = user_message {
+        match mode {
+            LanguageMode::ChineseOnly => {
+                prompt.push_str(&format!("\n\n用户描述：\n{}\n\n变更内容：\n", msg));
+            }
+            _ => {
+                prompt.push_str(&format!("\n\nUser Description:\n{}\n\nChanges:\n", msg));
+            }
+        }
+    } else {
+        match mode {
+            LanguageMode::ChineseOnly => {
+                prompt.push_str("\n\n变更内容：\n");
+            }
+            _ => {
+                prompt.push_str("\n\nHere are the changes:\n");
+            }
+        }
+    }
+    
+    prompt
+}
+
 pub struct CommitMessage {
     pub title: String,
     pub body: Option<String>,
@@ -156,158 +280,9 @@ pub async fn generate_commit_message(
     // 设置环境变量标记跳过后续的代码审查
     std::env::set_var("GIT_COMMIT_HELPER_SKIP_REVIEW", "1");
 
-    let prompt = match (message.as_ref(), only_chinese, only_english) {
-        // 仅英文模式
-        (Some(msg), _, true) => format!(
-            "Please analyze the git diff content and generate a commit message in English only:
-                1. First line: type: message (under 50 characters)
-                2. Empty line after the title
-                3. Detailed explanation in English (what was changed and why)
-                4. Type must be one of: feat/fix/docs/style/refactor/test/chore
-                5. Focus on both WHAT changed and WHY it was necessary
-                6. Include any important technical details or context
-                7. DO NOT include any Chinese content
-                8. DO NOT wrap the response in any markdown or code block markers
-
-                Example response format:
-                feat: add user authentication module
-
-                1. Implement JWT-based authentication system
-                2. Add user login and registration endpoints
-                3. Include password hashing with bcrypt
-                4. Set up token refresh mechanism
-
-                Please respond with ONLY the commit message following this format,
-                DO NOT end commit titles with any punctuation.
-            \n\nUser Description:\n{}\n\nChanges:\n",
-            msg
-        ),
-        (None, _, true) => format!(
-            "Please analyze the git diff content and generate a commit message in English only:
-                1. First line: type: message (under 50 characters)
-                2. Empty line after the title
-                3. Detailed explanation in English (what was changed and why)
-                4. Type must be one of: feat/fix/docs/style/refactor/test/chore
-                5. Focus on both WHAT changed and WHY it was necessary
-                6. Include any important technical details or context
-                7. DO NOT include any Chinese content
-                8. DO NOT wrap the response in any markdown or code block markers
-
-                Example response format:
-                feat: add user authentication module
-
-                1. Implement JWT-based authentication system
-                2. Add user login and registration endpoints
-                3. Include password hashing with bcrypt
-                4. Set up token refresh mechanism
-
-                Please respond with ONLY the commit message following this format,
-                DO NOT end commit titles with any punctuation.
-            \n\nHere are the changes:\n"
-        ),
-        // 仅中文模式
-        (Some(msg), true, false) => format!(
-            "请分析以下 git diff 内容，并按照以下格式生成提交信息：\
-                1. 第一行为标题：type: message（不超过50个字符）\
-                2. 标题下方空一行\
-                3. 详细的中文说明（解释做了什么改动以及为什么需要这些改动）\
-                4. type 必须是以下之一：feat/fix/docs/style/refactor/test/chore\
-                5. 关注点：变更内容（做了什么）和变更原因（为什么）\
-                6. 包含重要的技术细节或上下文\
-                7. 不要使用任何 markdown 或代码块标记\
-                8. 标题结尾不要使用标点符号\
-            \n\n示例格式：\
-            feat: 添加用户认证模块\n\
-            1. 实现基于 JWT 的认证系统\n\
-            2. 添加用户登录和注册端点\n\
-            3. 包含使用 bcrypt 的密码哈希处理\n\
-            4. 设置令牌刷新机制
-            \n\n用户描述：\n{}\n\n变更内容：\n",
-            msg
-        ),
-        (None, true, false) => format!(
-            "请分析以下 git diff 内容，并按照以下格式生成提交信息：\
-                1. 第一行为标题：type: message（不超过50个字符）\
-                2. 标题下方空一行\
-                3. 详细的中文说明（解释做了什么改动以及为什么需要这些改动）\
-                4. type 必须是以下之一：feat/fix/docs/style/refactor/test/chore\
-                5. 关注点：变更内容（做了什么）和变更原因（为什么）\
-                6. 包含重要的技术细节或上下文\
-                7. 不要使用任何 markdown 或代码块标记\
-                8. 标题结尾不要使用标点符号\
-            \n\n示例格式：\
-            feat: 添加用户认证模块\n\
-            1. 实现基于 JWT 的认证系统\n\
-            2. 添加用户登录和注册端点\n\
-            3. 包含使用 bcrypt 的密码哈希处理\n\
-            4. 设置令牌刷新机制
-            \n\n变更内容：\n"
-        ),
-        // 双语模式（默认）
-        (Some(msg), false, false) => format!(
-            "Please analyze the git diff content and generate a detailed bilingual commit message with:
-                1. First line in English: type: message (under 50 characters)
-                2. Empty line after the title
-                3. Detailed explanation in English (what was changed and why)
-                4. Empty line after English explanation
-                5. Chinese title and explanation (translate the English content)
-                6. Type must be one of: feat/fix/docs/style/refactor/test/chore
-                7. Focus on both WHAT changed and WHY it was necessary
-                8. Include any important technical details or context
-                9. DO NOT wrap the response in any markdown or code block markers
-
-                Example response format:
-                feat: add user authentication module
-
-                1. Implement JWT-based authentication system
-                2. Add user login and registration endpoints
-                3. Include password hashing with bcrypt
-                4. Set up token refresh mechanism
-
-                feat: 添加用户认证模块
-
-                1. 实现基于 JWT 的认证系统
-                2. 添加用户登录和注册端点
-                3. 包含使用 bcrypt 的密码哈希处理
-                4. 设置令牌刷新机制
-
-                Please respond with ONLY the commit message following this format,
-                DO NOT end commit titles with any punctuation.
-            \n\nUser Description:\n{}\n\nChanges:\n",
-            msg
-        ),
-        (None, false, false) => format!(
-            "Please analyze the git diff content and generate a detailed bilingual commit message with:
-                1. First line in English: type: message (under 50 characters)
-                2. Empty line after the title
-                3. Detailed explanation in English (what was changed and why)
-                4. Empty line after English explanation
-                5. Chinese title and explanation (translate the English content)
-                6. Type must be one of: feat/fix/docs/style/refactor/test/chore
-                7. Focus on both WHAT changed and WHY it was necessary
-                8. Include any important technical details or context
-                9. DO NOT wrap the response in any markdown or code block markers
-
-                Example response format:
-                feat: add user authentication module
-
-                1. Implement JWT-based authentication system
-                2. Add user login and registration endpoints
-                3. Include password hashing with bcrypt
-                4. Set up token refresh mechanism
-
-                feat: 添加用户认证模块
-
-                1. 实现基于 JWT 的认证系统
-                2. 添加用户登录和注册端点
-                3. 包含使用 bcrypt 的密码哈希处理
-                4. 设置令牌刷新机制
-
-                Please respond with ONLY the commit message following this format,
-                DO NOT end commit titles with any punctuation.
-            \n\nHere are the changes:\n"
-        )
-    };
+    // 确定语言模式并构建提示词
+    let language_mode = LanguageMode::determine(only_chinese, only_english);
+    let prompt = build_prompt(language_mode, message.as_deref());
 
     debug!("生成的提示信息：\n{}", prompt);
 
