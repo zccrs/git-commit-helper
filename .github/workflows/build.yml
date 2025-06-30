@@ -196,11 +196,7 @@ jobs:
   publish_aur:
     runs-on: ubuntu-latest
     steps:
-    - name: Download PKGBUILD from update_version job
-      uses: actions/download-artifact@v4
-      with:
-          name: PKGBUILD
-
+    - uses: actions/checkout@v2
     - name: Publish AUR package
       uses: ulises-jeremias/github-actions-aur-publish@v1
       with:
