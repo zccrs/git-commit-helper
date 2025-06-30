@@ -197,6 +197,15 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v2
+    - name: Patch PKGBUILD for AUR
+      run: |
+        commit_hash="$GITHUB_SHA"
+        url="https://github.com/zccrs/git-commit-helper/archive/${commit_hash}.tar.gz"
+        curl -L -o "git-commit-helper-${commit_hash}.tar.gz" "$url"
+        sha256=$(sha256sum "git-commit-helper-${commit_hash}.tar.gz" | awk '{print $1}')
+        sed -i "/^source=/c\source=(\"\$pkgname-\$pkgver.tar.gz::$url\")" PKGBUILD
+        sed -i "/^sha256sums=/c\sha256sums=('$sha256')" PKGBUILD
+        sed -i 's|cd "\$startdir"|cd "\$srcdir/\$pkgname-\$pkgver"|g' PKGBUILD
     - name: Publish AUR package
       uses: ulises-jeremias/github-actions-aur-publish@v1
       with:
