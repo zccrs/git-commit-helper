@@ -206,7 +206,7 @@ jobs:
           ssh-keyscan aur.archlinux.org >> ~/.ssh/known_hosts
       - name: Clone AUR repo
         run: |
-          git clone "ssh://aur@aur.archlinux.org/git-commit-helper.git" aur-repo
+          git clone "ssh://zccrs@aur.archlinux.org/git-commit-helper.git" aur-repo
       - name: Update PKGBUILD and files
         run: |
           cp PKGBUILD aur-repo/
