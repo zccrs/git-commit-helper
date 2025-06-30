@@ -205,7 +205,7 @@ jobs:
         sha256=$(sha256sum "git-commit-helper-${commit_hash}.tar.gz" | awk '{print $1}')
         sed -i "/^source=/c\source=(\"\$pkgname-\$pkgver.tar.gz::$url\")" PKGBUILD
         sed -i "/^sha256sums=/c\sha256sums=('$sha256')" PKGBUILD
-        sed -i 's|cd "\$startdir"|cd "\$srcdir/\$pkgname-\$pkgver"|g' PKGBUILD
+        sed -i 's|cd "\$startdir"|cd "\$srcdir/\$pkgname-${commit_hash}"|g' PKGBUILD
     - name: Publish AUR package
       uses: ulises-jeremias/github-actions-aur-publish@v1
       with:
