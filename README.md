@@ -508,6 +508,12 @@ jobs:
 - 🍎 macOS: `~/Library/Application Support/git-commit-helper/config.json`
 - 🪟 Windows: `%APPDATA%\git-commit-helper\config.json`
 
+## 📝 版本历史
+
+### v0.5.3
+
+- Release version 0.5.3
+
 ## 🔍 调试日志
 
 通过设置环境变量 `RUST_LOG` 可以开启调试日志：

@@ -1,3 +1,9 @@
+git-commit-helper (0.5.3) unstable; urgency=medium
+
+  * Release version 0.5.3
+
+ -- zccrs <zhangjide@deepin.org>  Mon, 30 Jun 2025 17:16:04 +0800
+
 git-commit-helper (0.5.0) unstable; urgency=medium
 
   * Release version 0.5.0
