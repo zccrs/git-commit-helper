@@ -39,6 +39,9 @@ enum Commands {
         /// 设置默认是否只使用中文提交信息，true: 仅中文，false: 中英双语
         #[arg(long = "set-only-chinese", help = "设置是否默认只使用中文提交信息，true: 仅中文，false: 中英双语")]
         only_chinese: Option<bool>,
+        /// 设置默认是否只使用英文提交信息，true: 仅英文，false: 中英双语
+        #[arg(long = "set-only-english", help = "设置是否默认只使用英文提交信息，true: 仅英文，false: 中英双语")]
+        only_english: Option<bool>,
     },
     /// 显示当前配置信息
     Show,
@@ -86,6 +89,9 @@ enum Commands {
         /// 仅保留中文提交信息
         #[arg(long = "only-chinese")]
         only_chinese: bool,
+        /// 仅保留英文提交信息
+        #[arg(long = "only-english")]
+        only_english: bool,
     },
     /// 管理 AI 代码审查功能
     #[command(name = "ai-review")]
@@ -187,13 +193,38 @@ async fn main() -> Result<()> {
     };
 
     match cli.command {
-        Some(Commands::Config { only_chinese }) => {
+        Some(Commands::Config { only_chinese, only_english }) => {
             if let Some(only_chinese) = only_chinese {
                 let mut config = config::Config::load().unwrap_or_else(|_| config::Config::new());
                 config.only_chinese = only_chinese;
+                if only_chinese {
+                    config.only_english = false; // 如果设置为仅中文，则清除仅英文标志
+                }
                 config.save()?;
-                println!("{}", Style::green(&format!("已将默认提交信息语言设置为: {}",
-                    if only_chinese { "仅中文" } else { "中英双语" })));
+                let language_mode = if config.only_chinese {
+                    "仅中文"
+                } else if config.only_english {
+                    "仅英文"
+                } else {
+                    "中英双语"
+                };
+                println!("{}", Style::green(&format!("已将默认提交信息语言设置为: {}", language_mode)));
+                Ok(())
+            } else if let Some(only_english) = only_english {
+                let mut config = config::Config::load().unwrap_or_else(|_| config::Config::new());
+                config.only_english = only_english;
+                if only_english {
+                    config.only_chinese = false; // 如果设置为仅英文，则清除仅中文标志
+                }
+                config.save()?;
+                let language_mode = if config.only_chinese {
+                    "仅中文"
+                } else if config.only_english {
+                    "仅英文"
+                } else {
+                    "中英双语"
+                };
+                println!("{}", Style::green(&format!("已将默认提交信息语言设置为: {}", language_mode)));
                 Ok(())
             } else {
                 config::Config::interactive_config().await?;
@@ -373,14 +404,21 @@ async fn main() -> Result<()> {
                 Err(e) => Err(e)
             }
         }
-        Some(Commands::Commit { r#type, message, all, no_translate, only_chinese }) => {
-            commit::generate_commit_message(r#type, message, all, cli.no_review, no_translate, only_chinese).await
+        Some(Commands::Commit { r#type, message, all, no_translate, only_chinese, only_english }) => {
+            commit::generate_commit_message(r#type, message, all, cli.no_review, no_translate, only_chinese, only_english).await
         }
         Some(Commands::AIReview { enable, disable, status }) => {
             let mut config = config::Config::load()?;
             if status {
+                let language_mode = if config.only_chinese {
+                    "仅中文"
+                } else if config.only_english {
+                    "仅英文"
+                } else {
+                    "中英双语"
+                };
                 println!("{}", Style::title(&format!("AI 代码审查功能当前状态: {}", if config.ai_review { "已启用" } else { "已禁用" })));
-                println!("{}", Style::plain(&format!("默认提交信息语言: {}", if config.only_chinese { "仅中文" } else { "中英双语" })));
+                println!("{}", Style::plain(&format!("默认提交信息语言: {}", language_mode)));
                 return Ok(());
             }
             if enable {

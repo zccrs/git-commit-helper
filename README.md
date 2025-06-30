@@ -178,7 +178,7 @@ git-commit-helper translate /path/to/existing/file    # 文件路径
 
 | 命令 | 说明 | 示例 |
 |------|------|------|
-| config | 配置 AI 服务 | `git-commit-helper config [--set-only-chinese <true\|false>]` |
+| config | 配置 AI 服务 | `git-commit-helper config [--set-only-chinese <true\|false>/--set-only-english <true\|false>]` |
 | show | 显示当前配置 | `git-commit-helper show` |
 | install | 安装 Git Hook | `git-commit-helper install [-f]` |
 | ai add | 添加 AI 服务 | `git-commit-helper ai add` |
@@ -189,7 +189,7 @@ git-commit-helper translate /path/to/existing/file    # 文件路径
 | ai list | 列出所有服务 | `git-commit-helper ai list` |
 | ai test | 测试指定服务 | `git-commit-helper ai test [-t "测试文本"]` |
 | translate | 翻译内容 | `git-commit-helper translate [-f 文件] [-t 文本]` |
-| commit | 生成提交信息 | `git-commit-helper commit [-t 类型] [-m 描述] [-a] [--no-review]` |
+| commit | 生成提交信息 | `git-commit-helper commit [-t 类型] [-m 描述] [-a] [--no-review/--only-chinese/--only-english]` |
 | ai-review | 管理 AI 代码审查 | `git-commit-helper ai-review [--enable/--disable/--status]` |
 
 ### 提交类型
@@ -235,9 +235,11 @@ git-commit-helper commit [选项]
     -a, --all                 自动添加所有已修改但未暂存的文件
     --no-review              禁用当前提交的代码审查功能
     --only-chinese           仅保留中文提交信息
+    --only-english           仅保留英文提交信息
 ```
 
 示例：
+
 ```bash
 # 生成提交信息
 git-commit-helper commit
@@ -256,10 +258,18 @@ git-commit-helper commit --type fix --message "修复内存泄漏" -a
 
 # 设置默认使用中文
 git-commit-helper config --set-only-chinese true   # 默认仅使用中文
-git-commit-helper config --set-only-chinese false  # 默认使用中英双语
+
+# 设置默认使用英文
+git-commit-helper config --set-only-english true   # 默认仅使用英文
+
+# 设置默认使用中英双语
+git-commit-helper config --set-only-chinese false --set-only-english false  # 默认使用中英双语
 
 # 单次提交使用中文
 git-commit-helper commit --type feat --message "添加新功能" --only-chinese
+
+# 单次提交使用英文
+git-commit-helper commit --type feat --message "Add new functions" --only-english
 ```
 
 ### AI 代码审查功能
@@ -305,7 +315,7 @@ git-commit-helper https://gerrit.example.com/c/project/+/123456
 ```
 
 输出格式：
-```
+```txt
 标题：<原始标题>
 中文翻译：<标题翻译>
 
