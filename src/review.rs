@@ -5,6 +5,7 @@ use crate::ai_service;
 use crate::github;
 use crate::gerrit;
 use log::{debug, info};
+use crate::terminal_format::Style;
 
 pub async fn review_remote_changes(config: &Config, url: &str) -> Result<String> {
     debug!("开始审查远程代码改动: {}", url);
@@ -84,7 +85,43 @@ pub async fn review_remote_changes(config: &Config, url: &str) -> Result<String>
     let review_result = translator.chat(&system_prompt, &diff).await?;
     review.push_str(&review_result);
 
+    // 终端格式化输出
+    let review = format_review_for_terminal(&review);
     Ok(review)
+}
+
+// 终端格式化review内容
+fn format_review_for_terminal(input: &str) -> String {
+    let mut out = String::new();
+    let mut in_report = false;
+    for line in input.lines() {
+        if line.trim().is_empty() {
+            out.push('\n');
+            continue;
+        }
+        if line.starts_with("标题：") {
+            out.push_str(&Style::separator());
+            out.push_str(&Style::title(line));
+        } else if line.starts_with("中文翻译：") {
+            out.push_str(&Style::green(line));
+        } else if line.starts_with("描述：") {
+            out.push_str(&Style::blue(line));
+        } else if line.starts_with("代码审查报告：") {
+            out.push_str(&Style::separator());
+            out.push_str(&Style::yellow(line));
+            in_report = true;
+        } else if line.starts_with("警告") {
+            out.push_str(&Style::yellow(line));
+        } else if line.starts_with("错误") {
+            out.push_str(&Style::red(line));
+        } else if in_report {
+            out.push_str(&Style::plain(line));
+        } else {
+            out.push_str(&Style::plain(line));
+        }
+    }
+    out.push_str(&Style::separator());
+    out
 }
 
 pub async fn review_changes(config: &Config, no_review: bool) -> Result<Option<String>> {

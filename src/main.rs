@@ -4,6 +4,8 @@ use dialoguer::{Confirm, Select, Input};
 use log::debug;
 use std::path::PathBuf;
 use crate::config::AIService;
+mod terminal_format;
+use terminal_format::Style;
 
 mod config;
 mod git;
@@ -134,7 +136,7 @@ async fn main() -> Result<()> {
     clap_complete::CompleteEnv::with_factory(<Cli as clap::CommandFactory>::command)
         .complete();
 
-    let default_level = if cfg!(debug_assertions) { "debug" } else { "info" };
+    let default_level = if cfg!(debug_assertions) { "debug" } else { "warn" };
     env_logger::Builder::from_env(env_logger::Env::default().default_filter_or(default_level))
         .format_timestamp(None)
         .format_module_path(false)
@@ -170,8 +172,8 @@ async fn main() -> Result<()> {
             if let Some(Commands::Config { .. }) = cli.command {
                 config::Config::new()
             } else {
-                println!("错误: {}", e);
-                println!("未检测到有效的 AI 配置，需要先进行配置");
+                println!("{}", Style::red(&format!("错误: {}", e)));
+                println!("{}", Style::yellow("未检测到有效的 AI 配置，需要先进行配置"));
                 if Confirm::new()
                     .with_prompt("是否现在进行配置？")
                     .default(true)
@@ -190,8 +192,8 @@ async fn main() -> Result<()> {
                 let mut config = config::Config::load().unwrap_or_else(|_| config::Config::new());
                 config.only_chinese = only_chinese;
                 config.save()?;
-                println!("已将默认提交信息语言设置为: {}",
-                    if only_chinese { "仅中文" } else { "中英双语" });
+                println!("{}", Style::green(&format!("已将默认提交信息语言设置为: {}",
+                    if only_chinese { "仅中文" } else { "中英双语" })));
                 Ok(())
             } else {
                 config::Config::interactive_config().await?;
@@ -201,18 +203,19 @@ async fn main() -> Result<()> {
         Some(Commands::Show) => {
             let config = config::Config::load()?;
             let config_path = config::Config::config_path()?;
-            println!("配置文件路径: {}", config_path.display());
-            println!("\n当前配置内容:");
-            println!("默认 AI 服务: {:?}", config.default_service);
-            println!("\n已配置的服务:");
+            println!("{}", Style::title(&format!("配置文件路径: {}", config_path.display())));
+            println!("{}", Style::separator());
+            println!("{}", Style::title("当前配置内容:"));
+            println!("{}", Style::plain(&format!("默认 AI 服务: {:?}", config.default_service)));
+            println!("{}", Style::title("已配置的服务:"));
             for (i, service) in config.services.iter().enumerate() {
-                println!("{}. {:?}", i + 1, service.service);
-                println!("   API Key: {}", service.api_key);
+                println!("{}", Style::plain(&format!("{}. {:?}", i + 1, service.service)));
+                println!("{}", Style::plain(&format!("   API Key: {}", service.api_key)));
                 if let Some(endpoint) = &service.api_endpoint {
-                    println!("   API Endpoint: {}", endpoint);
+                    println!("{}", Style::plain(&format!("   API Endpoint: {}", endpoint)));
                 }
                 if let Some(model) = &service.model {
-                    println!("   Model: {}", model);
+                    println!("{}", Style::plain(&format!("   Model: {}", model)));
                 }
             }
             Ok(())
@@ -266,18 +269,14 @@ async fn main() -> Result<()> {
                 ServiceCommands::SetTimeout { seconds } => {
                     config.timeout_seconds = seconds;
                     config.save()?;
-                    println!("已将网络请求超时时间设置为 {} 秒", seconds);
+                    println!("{}", Style::green(&format!("已将网络请求超时时间设置为 {} 秒", seconds)));
                     Ok(())
                 }
                 ServiceCommands::List => {
                     let config = config::Config::load()?;
-                    println!("已配置的 AI 服务列表:");
+                    println!("{}", Style::title("已配置的 AI 服务列表:"));
                     for (i, service) in config.services.iter().enumerate() {
-                        println!("[{}] {:?}{}",
-                            i + 1,
-                            service.service,
-                            if service.service == config.default_service { " (默认)" } else { "" }
-                        );
+                        println!("{}", Style::plain(&format!("[{}] {:?}{}", i + 1, service.service, if service.service == config.default_service { " (默认)" } else { "" })));
                     }
                     Ok(())
                 }
@@ -304,7 +303,7 @@ async fn main() -> Result<()> {
                         .interact()?;
 
                     let service = &config.services[selection];
-                    println!("正在测试 {:?} 服务...", service.service);
+                    println!("{}", Style::title(&format!("正在测试 {:?} 服务...", service.service)));
 
                     let translator = ai_service::create_translator_for_service(service).await?;
                     let test_text = text.unwrap_or_else(|| "这是一个测试消息，用于验证翻译功能是否正常。".to_string());
@@ -312,23 +311,25 @@ async fn main() -> Result<()> {
                     match translator.translate(&test_text).await {
                         Ok(result) => {
                             debug!("收到翻译响应");
-                            println!("\n测试结果:");
-                            println!("原文: {}", test_text);
+                            println!("{}", Style::separator());
+                            println!("{}", Style::title("测试结果:"));
+                            println!("{}", Style::plain(&format!("原文: {}", test_text)));
                             if result.is_empty() {
-                                println!("警告: 收到空的翻译结果！");
+                                println!("{}", Style::yellow("警告: 收到空的翻译结果！"));
                             }
-                            println!("译文: {}", result);
-                            println!("\n测试成功！");
+                            println!("{}", Style::green(&format!("译文: {}", result)));
+                            println!("{}", Style::green("测试成功！"));
                             Ok(())
                         }
                         Err(e) => {
-                            println!("\n测试失败！错误信息:");
-                            println!("{}", e);
-                            println!("\n请检查:");
-                            println!("1. API Key 是否正确");
-                            println!("2. API Endpoint 是否可访问");
-                            println!("3. 网络连接是否正常");
-                            println!("4. 查看日志获取详细信息（设置 RUST_LOG=debug）");
+                            println!("{}", Style::separator());
+                            println!("{}", Style::red("测试失败！错误信息:"));
+                            println!("{}", Style::red(&format!("{}", e)));
+                            println!("{}", Style::yellow("请检查:"));
+                            println!("{}", Style::plain("1. API Key 是否正确"));
+                            println!("{}", Style::plain("2. API Endpoint 是否可访问"));
+                            println!("{}", Style::plain("3. 网络连接是否正常"));
+                            println!("{}", Style::plain("4. 查看日志获取详细信息（设置 RUST_LOG=debug）"));
                             Err(e)
                         }
                     }
@@ -358,14 +359,15 @@ async fn main() -> Result<()> {
             };
 
             let service = config.get_default_service()?;
-            println!("正在使用 {:?} 服务进行翻译...", service.service);
+            println!("{}", Style::title(&format!("正在使用 {:?} 服务进行翻译...", service.service)));
 
             let translator = ai_service::create_translator_for_service(service).await?;
             match translator.translate(&content).await {
                 Ok(result) => {
-                    println!("\n翻译结果:");
-                    println!("原文: {}", content);
-                    println!("译文: {}", result);
+                    println!("{}", Style::separator());
+                    println!("{}", Style::title("翻译结果:"));
+                    println!("{}", Style::plain(&format!("原文: {}", content)));
+                    println!("{}", Style::green(&format!("译文: {}", result)));
                     Ok(())
                 }
                 Err(e) => Err(e)
@@ -377,20 +379,18 @@ async fn main() -> Result<()> {
         Some(Commands::AIReview { enable, disable, status }) => {
             let mut config = config::Config::load()?;
             if status {
-                println!("AI 代码审查功能当前状态: {}",
-                    if config.ai_review { "已启用" } else { "已禁用" });
-                println!("默认提交信息语言: {}",
-                    if config.only_chinese { "仅中文" } else { "中英双语" });
+                println!("{}", Style::title(&format!("AI 代码审查功能当前状态: {}", if config.ai_review { "已启用" } else { "已禁用" })));
+                println!("{}", Style::plain(&format!("默认提交信息语言: {}", if config.only_chinese { "仅中文" } else { "中英双语" })));
                 return Ok(());
             }
             if enable {
                 config.ai_review = true;
                 config.save()?;
-                println!("已启用 AI 代码审查功能");
+                println!("{}", Style::green("已启用 AI 代码审查功能"));
             } else if disable {
                 config.ai_review = false;
                 config.save()?;
-                println!("已禁用 AI 代码审查功能");
+                println!("{}", Style::yellow("已禁用 AI 代码审查功能"));
             }
             Ok(())
         }

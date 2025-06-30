@@ -8,3 +8,4 @@ pub mod github;
 pub mod gerrit;
 pub mod install;
 pub mod review;
+pub mod terminal_format;
