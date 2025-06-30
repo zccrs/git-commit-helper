@@ -444,6 +444,63 @@ dpkg-buildpackage    # Debian
 rpmbuild -ba *.spec  # RPM
 ```
 
+## 🚀 自动推送到 Arch Linux AUR
+
+本项目支持通过 GitHub Actions 自动将 PKGBUILD 及相关文件推送到 AUR 仓库，实现一键同步更新。
+
+### 配置方法
+
+1. **在 GitHub 仓库设置 Secrets：**
+   - 添加名为 `AUR_SSH_PRIVATE_KEY` 的 secret，内容为你的 AUR 账户 SSH 私钥（建议使用专用密钥，且设置只读权限）。
+   - 可选：如需自定义 AUR 仓库地址，添加 `AUR_REPO_URL` secret。
+
+     **获取方法：**
+     1. 登录 [AUR 官网](https://aur.archlinux.org/) 并搜索你的包名。
+     2. 打开你的包页面，点击右上角 “Git Clone” 按钮，会显示类似：
+        ```
+        git clone ssh://aur@aur.archlinux.org/your-aur-repo.git
+        ```
+     3. 复制 `ssh://aur@aur.archlinux.org/your-aur-repo.git` 作为 `AUR_REPO_URL` 的值。
+
+2. **GitHub Actions Workflow 示例：**
+
+```yaml
+jobs:
+  aur-publish:
+    runs-on: ubuntu-latest
+    if: github.ref_type == 'tag'
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up SSH
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.AUR_SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
+          ssh-keyscan aur.archlinux.org >> ~/.ssh/known_hosts
+      - name: Clone AUR repo
+        run: |
+          git clone "${{ secrets.AUR_REPO_URL || 'ssh://aur@aur.archlinux.org/<your-aur-repo>.git' }}" aur-repo
+      - name: Update PKGBUILD and files
+        run: |
+          cp PKGBUILD aur-repo/
+          # 如有其它 AUR 文件一并复制
+          cd aur-repo
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add PKGBUILD
+          git commit -m "chore: update PKGBUILD to ${{ github.ref_name }}"
+          git push origin master
+```
+
+3. **注意事项：**
+   - 推送前请确保 PKGBUILD、.SRCINFO 等文件已更新到最新版本。
+   - 推荐在发布 tag 时自动推送，避免开发分支误同步。
+   - 请妥善保管 SSH 私钥，避免泄露。
+
+4. **常见问题：**
+   - 如遇权限或认证失败，请检查 SSH 密钥权限及 AUR 账户设置。
+   - 若需同步其它文件，请在 workflow 中补充 `cp` 和 `git add` 命令。
+
 ## ⚙️ 配置文件
 
 默认配置路径：

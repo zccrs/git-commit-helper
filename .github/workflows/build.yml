@@ -192,3 +192,28 @@ jobs:
           path: deb-repo
       - name: Deploy to GitHub Pages
         uses: actions/deploy-pages@v4
+
+  aur-publish:
+    runs-on: ubuntu-latest
+    if: github.ref_type == 'tag'
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up SSH
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.AUR_SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
+          ssh-keyscan aur.archlinux.org >> ~/.ssh/known_hosts
+      - name: Clone AUR repo
+        run: |
+          git clone "ssh://aur@aur.archlinux.org/git-commit-helper.git" aur-repo
+      - name: Update PKGBUILD and files
+        run: |
+          cp PKGBUILD aur-repo/
+          # 如有其它 AUR 文件一并复制
+          cd aur-repo
+          git config user.name "zccrs"
+          git config user.email "zccrs@live.com"
+          git add PKGBUILD
+          git commit -m "chore: update PKGBUILD to ${{ github.ref_name }}"
+          git push origin master
