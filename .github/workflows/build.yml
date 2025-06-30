@@ -195,8 +195,6 @@ jobs:
 
   publish_aur:
     runs-on: ubuntu-latest
-    needs: update_version
-    if: needs.update_version.outputs.need_update == 'true'
     steps:
     - name: Download PKGBUILD from update_version job
       uses: actions/download-artifact@v4
