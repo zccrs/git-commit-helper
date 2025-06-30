@@ -214,6 +214,6 @@ jobs:
         commit_username: zccrs
         commit_email: zccrs@live.com
         ssh_private_key: ${{ secrets.AUR_SSH_PRIVATE_KEY }}
-        commit_message: v${{ needs.update_version.outputs.latest_version }}
+        commit_message: $GITHUB_SHA
         ssh_keyscan_types: rsa,ed25519
         update_pkgver: false
