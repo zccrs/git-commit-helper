@@ -1,10 +1,11 @@
 // 终端彩色输出工具模块
 // 用于统一管理ANSI颜色和结构化输出
 
+use std::io::{self, Write};
+
 pub struct Style;
 
 impl Style {
-    pub const ESC: &'static str = "\x1b";
     pub const RESET: &'static str = "\x1b[0m";
     pub const BOLD: &'static str = "\x1b[1m";
     pub const BLUE: &'static str = "\x1b[34m";
@@ -48,4 +49,20 @@ impl Style {
     pub fn plain(text: &str) -> String {
         format!("{}{}", text, "\n")
     }
+}
+
+/// 进度提示工具函数
+/// 示例：print_progress("正在请求 github.com 获取PR内容", Some(30));
+///      print_progress("正在请求 github.com 获取PR内容", Some(100));
+///      print_progress("正在请求 api.openai.com 进行代码审查", None);
+pub fn print_progress(msg: &str, percent: Option<u8>) {
+    // 构造进度文本
+    let progress = match percent {
+        Some(p) => format!(" {}%...", p),
+        None => " ...".to_string(),
+    };
+    // \r回到行首，补足空格清除残留
+    let text = format!("\r{}{}{}", msg, progress, "      ");
+    print!("{}", text);
+    io::stdout().flush().ok();
 }

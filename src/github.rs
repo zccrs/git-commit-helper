@@ -19,6 +19,8 @@ struct PullRequest {
     body: Option<String>,
 }
 
+use crate::terminal_format::print_progress;
+
 pub async fn get_pr_info(pr_url: &str) -> Result<String> {
     debug!("从GitHub获取PR信息: {}", pr_url);
 
@@ -39,6 +41,9 @@ pub async fn get_pr_info(pr_url: &str) -> Result<String> {
         owner, repo, pr_number
     );
 
+    // 进度提示
+    print_progress("正在请求 github.com 获取PR内容", None);
+
     // 发送请求
     let client = reqwest::Client::new();
     let pr: PullRequest = client
@@ -49,6 +54,8 @@ pub async fn get_pr_info(pr_url: &str) -> Result<String> {
         .await?
         .json()
         .await?;
+
+    print_progress("正在请求 github.com 获取PR内容", Some(100));
 
     let mut info = format!("标题：{}\n", pr.title);
     if let Some(body) = pr.body {
@@ -114,6 +121,9 @@ pub async fn get_pr_diff(pr_url: &str) -> Result<String> {
         owner, repo, pr_number
     );
 
+    // 进度提示
+    print_progress("正在请求 github.com 获取PR内容", None);
+
     // 发送请求
     let client = reqwest::Client::new();
     let pr: PullRequest = client
@@ -125,7 +135,10 @@ pub async fn get_pr_diff(pr_url: &str) -> Result<String> {
         .json()
         .await?;
 
+    print_progress("正在请求 github.com 获取PR内容", Some(60));
+
     // 获取diff内容
+    print_progress("正在请求 github.com 获取PR差异内容", None);
     let diff = client
         .get(&pr.diff_url)
         .header("User-Agent", "git-commit-helper")
@@ -133,6 +146,8 @@ pub async fn get_pr_diff(pr_url: &str) -> Result<String> {
         .await?
         .text()
         .await?;
+
+    print_progress("正在请求 github.com 获取PR差异内容", Some(100));
 
     Ok(diff)
 }

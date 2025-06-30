@@ -24,6 +24,8 @@ struct ChangeInfo {
     current_revision: String,
 }
 
+use crate::terminal_format::print_progress;
+
 pub async fn get_change_info(url: &str) -> Result<String> {
     debug!("开始获取 Gerrit 改动信息: {}", url);
 
@@ -57,6 +59,9 @@ pub async fn get_change_info(url: &str) -> Result<String> {
         change_id
     );
 
+    // 进度提示
+    print_progress("正在请求 gerrit 获取改动信息", None);
+
     // 创建 HTTP 客户端并发送请求
     let mut request = Client::new()
         .get(&api_url)
@@ -66,6 +71,8 @@ pub async fn get_change_info(url: &str) -> Result<String> {
     request = add_auth(request);
 
     let response = request.send().await?;
+
+    print_progress("正在请求 gerrit 获取改动信息", Some(100));
 
     if !response.status().is_success() {
         return Err(anyhow::anyhow!(
@@ -133,6 +140,9 @@ pub async fn get_change_diff(url: &str) -> Result<String> {
 
     debug!("Gerrit API URL: {}", api_url);
 
+    // 进度提示
+    print_progress("正在请求 gerrit 获取改动内容", None);
+
     // 创建 HTTP 客户端并准备请求
     let mut request = Client::new()
         .get(&api_url)
@@ -141,6 +151,8 @@ pub async fn get_change_diff(url: &str) -> Result<String> {
     request = add_auth(request);
 
     let response = request.send().await?;
+
+    print_progress("正在请求 gerrit 获取改动内容", Some(100));
 
     if !response.status().is_success() {
         return Err(anyhow::anyhow!(

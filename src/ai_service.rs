@@ -2,6 +2,7 @@ use async_trait::async_trait;
 use dialoguer::{Confirm, Select};
 use log::{debug, info, warn};
 use crate::config::{AIService, Config, AIServiceConfig};
+use crate::terminal_format::print_progress;
 
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 pub struct Message {
@@ -248,6 +249,12 @@ impl AiService for DeepSeekTranslator {
             "max_tokens": self.max_tokens
         });
 
+        let ai_host = match url.split('/').nth(2) {
+            Some(host) => host,
+            None => "api.deepseek.com",
+        };
+        print_progress(&format!("正在请求 {} 进行AI对话", ai_host), None);
+
         loop {
             match client
                 .post(&url)
@@ -257,6 +264,7 @@ impl AiService for DeepSeekTranslator {
                 .await
             {
                 Ok(response) => {
+                    print_progress(&format!("正在请求 {} 进行AI对话", ai_host), Some(100));
                     debug!("收到响应: {:#?}", response);
 
                     if !response.status().is_success() {
@@ -315,6 +323,12 @@ impl AiService for OpenAITranslator {
             "messages": messages
         });
 
+        let ai_host = match url.split('/').nth(2) {
+            Some(host) => host,
+            None => "api.openai.com",
+        };
+        print_progress(&format!("正在请求 {} 进行AI对话", ai_host), None);
+
         loop {
             match client
                 .post(&url)
@@ -324,6 +338,7 @@ impl AiService for OpenAITranslator {
                 .await
             {
                 Ok(response) => {
+                    print_progress(&format!("正在请求 {} 进行AI对话", ai_host), Some(100));
                     debug!("收到响应: {:#?}", response);
 
                     if !response.status().is_success() {
@@ -382,6 +397,12 @@ impl AiService for ClaudeTranslator {
             "messages": messages
         });
 
+        let ai_host = match url.split('/').nth(2) {
+            Some(host) => host,
+            None => "api.anthropic.com",
+        };
+        print_progress(&format!("正在请求 {} 进行AI对话", ai_host), None);
+
         loop {
             match client
                 .post(&url)
@@ -392,6 +413,7 @@ impl AiService for ClaudeTranslator {
                 .await
             {
                 Ok(response) => {
+                    print_progress(&format!("正在请求 {} 进行AI对话", ai_host), Some(100));
                     debug!("收到响应: {:#?}", response);
 
                     if !response.status().is_success() {
@@ -429,6 +451,9 @@ impl AiService for ClaudeTranslator {
 impl AiService for CopilotTranslator {
     async fn chat(&self, system_prompt: &str, user_content: &str) -> anyhow::Result<String> {
         debug!("使用 Copilot");
+        let ai_host = "copilot.local";
+        print_progress(&format!("正在请求 {} 进行AI对话", ai_host), None);
+
         let messages = vec![
             copilot_client::Message {
                 role: "system".to_string(),
@@ -441,6 +466,7 @@ impl AiService for CopilotTranslator {
         ];
         debug!("发送给 Copilot 的消息:\n{}", serde_json::to_string_pretty(&messages)?);
         let response = self.client.chat_completion(messages, self.model.clone()).await?;
+        print_progress(&format!("正在请求 {} 进行AI对话", ai_host), Some(100));
         let result = response.choices.get(0)
             .map(|choice| choice.message.content.clone())
             .unwrap_or_default();
@@ -467,6 +493,12 @@ impl AiService for GeminiTranslator {
             }]
         });
 
+        let ai_host = match url.split('/').nth(2) {
+            Some(host) => host,
+            None => "generativelanguage.googleapis.com",
+        };
+        print_progress(&format!("正在请求 {} 进行AI对话", ai_host), None);
+
         loop {
             match client
                 .post(&url)
@@ -475,6 +507,7 @@ impl AiService for GeminiTranslator {
                 .await
             {
                 Ok(response) => {
+                    print_progress(&format!("正在请求 {} 进行AI对话", ai_host), Some(100));
                     debug!("收到响应: {:#?}", response);
 
                     if !response.status().is_success() {
@@ -533,6 +566,12 @@ impl AiService for GrokTranslator {
             "messages": messages
         });
 
+        let ai_host = match url.split('/').nth(2) {
+            Some(host) => host,
+            None => "api.x.ai",
+        };
+        print_progress(&format!("正在请求 {} 进行AI对话", ai_host), None);
+
         loop {
             match client
                 .post(&url)
@@ -542,6 +581,7 @@ impl AiService for GrokTranslator {
                 .await
             {
                 Ok(response) => {
+                    print_progress(&format!("正在请求 {} 进行AI对话", ai_host), Some(100));
                     debug!("收到响应: {:#?}", response);
 
                     if !response.status().is_success() {
@@ -607,6 +647,12 @@ impl AiService for QwenTranslator {
             "max_tokens": 256
         });
 
+        let ai_host = match url.split('/').nth(2) {
+            Some(host) => host,
+            None => "dashscope.aliyuncs.com",
+        };
+        print_progress(&format!("正在请求 {} 进行AI对话", ai_host), None);
+
         loop {
             match client
                 .post(&url)
@@ -616,6 +662,7 @@ impl AiService for QwenTranslator {
                 .await
             {
                 Ok(response) => {
+                    print_progress(&format!("正在请求 {} 进行AI对话", ai_host), Some(100));
                     debug!("收到响应: {:#?}", response);
 
                     if !response.status().is_success() {
