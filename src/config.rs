@@ -24,10 +24,16 @@ pub struct Config {
     pub gerrit: Option<GerritConfig>,  // Gerrit 配置
     #[serde(default = "default_only_chinese")]
     pub only_chinese: bool,  // 是否默认只使用中文
+    #[serde(default = "default_only_english")]
+    pub only_english: bool,  // 是否默认只使用英文
 }
 
 // 添加默认值函数
 fn default_only_chinese() -> bool {
+    false
+}
+
+fn default_only_english() -> bool {
     false
 }
 
@@ -82,6 +88,7 @@ impl Config {
             max_tokens: default_max_tokens(),
             gerrit: None,
             only_chinese: false,  // 默认关闭
+            only_english: false,  // 默认关闭
         }
     }
 
@@ -279,6 +286,7 @@ impl Config {
             max_tokens: default_max_tokens(),
             gerrit: None,
             only_chinese: false,  // 默认关闭
+            only_english: false,  // 默认关闭
         };
 
         // 确保配置目录存在
@@ -307,6 +315,7 @@ impl Config {
                 max_tokens: config.max_tokens,
                 gerrit: None,
                 only_chinese: false,
+                only_english: false,
             };
             let translator = ai_service::create_translator(&test_config).await?;
             match translator.translate("这是一个测试消息，用于验证翻译功能是否正常。").await {
@@ -480,6 +489,7 @@ impl Config {
                 max_tokens: self.max_tokens,
                 gerrit: None,
                 only_chinese: false,
+                only_english: false,
             };
             let translator = ai_service::create_translator(&test_config).await?;
             let text = "这是一个测试消息，用于验证翻译功能是否正常。";

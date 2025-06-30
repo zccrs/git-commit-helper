@@ -104,13 +104,23 @@ pub async fn generate_commit_message(
     no_review: bool,
     no_translate: bool,
     mut only_chinese: bool,
+    mut only_english: bool,
 ) -> anyhow::Result<()> {
     // 加载配置，如果指定了参数则使用参数值，否则使用配置中的默认值
     if let Ok(config) = config::Config::load() {
-        if !only_chinese {
+        if !only_chinese && !only_english {
             only_chinese = config.only_chinese;
+            only_english = config.only_english;
         }
     }
+    
+    // 处理语言选项冲突：only_english 优先级最高
+    if only_english {
+        only_chinese = false;
+    } else if only_chinese {
+        only_english = false;
+    }
+
     // 如果指定了 -a 参数，先执行 git add -u
     if auto_add {
         info!("自动添加已修改的文件...");
@@ -146,8 +156,57 @@ pub async fn generate_commit_message(
     // 设置环境变量标记跳过后续的代码审查
     std::env::set_var("GIT_COMMIT_HELPER_SKIP_REVIEW", "1");
 
-    let prompt = match (message, only_chinese) {
-        (Some(msg), true) => format!(
+    let prompt = match (message.as_ref(), only_chinese, only_english) {
+        // 仅英文模式
+        (Some(msg), _, true) => format!(
+            "Please analyze the git diff content and generate a commit message in English only:
+                1. First line: type: message (under 50 characters)
+                2. Empty line after the title
+                3. Detailed explanation in English (what was changed and why)
+                4. Type must be one of: feat/fix/docs/style/refactor/test/chore
+                5. Focus on both WHAT changed and WHY it was necessary
+                6. Include any important technical details or context
+                7. DO NOT include any Chinese content
+                8. DO NOT wrap the response in any markdown or code block markers
+
+                Example response format:
+                feat: add user authentication module
+
+                1. Implement JWT-based authentication system
+                2. Add user login and registration endpoints
+                3. Include password hashing with bcrypt
+                4. Set up token refresh mechanism
+
+                Please respond with ONLY the commit message following this format,
+                DO NOT end commit titles with any punctuation.
+            \n\nUser Description:\n{}\n\nChanges:\n",
+            msg
+        ),
+        (None, _, true) => format!(
+            "Please analyze the git diff content and generate a commit message in English only:
+                1. First line: type: message (under 50 characters)
+                2. Empty line after the title
+                3. Detailed explanation in English (what was changed and why)
+                4. Type must be one of: feat/fix/docs/style/refactor/test/chore
+                5. Focus on both WHAT changed and WHY it was necessary
+                6. Include any important technical details or context
+                7. DO NOT include any Chinese content
+                8. DO NOT wrap the response in any markdown or code block markers
+
+                Example response format:
+                feat: add user authentication module
+
+                1. Implement JWT-based authentication system
+                2. Add user login and registration endpoints
+                3. Include password hashing with bcrypt
+                4. Set up token refresh mechanism
+
+                Please respond with ONLY the commit message following this format,
+                DO NOT end commit titles with any punctuation.
+            \n\nHere are the changes:\n"
+        ),
+        // 仅中文模式
+        (Some(msg), true, false) => format!(
             "请分析以下 git diff 内容，并按照以下格式生成提交信息：\
                 1. 第一行为标题：type: message（不超过50个字符）\
                 2. 标题下方空一行\
@@ -166,7 +225,7 @@ pub async fn generate_commit_message(
             \n\n用户描述：\n{}\n\n变更内容：\n",
             msg
         ),
-        (None, true) => format!(
+        (None, true, false) => format!(
             "请分析以下 git diff 内容，并按照以下格式生成提交信息：\
                 1. 第一行为标题：type: message（不超过50个字符）\
                 2. 标题下方空一行\
@@ -184,7 +243,8 @@ pub async fn generate_commit_message(
             4. 设置令牌刷新机制
             \n\n变更内容：\n"
         ),
-        (Some(msg), false) => format!(
+        // 双语模式（默认）
+        (Some(msg), false, false) => format!(
             "Please analyze the git diff content and generate a detailed bilingual commit message with:
                 1. First line in English: type: message (under 50 characters)
                 2. Empty line after the title
@@ -216,7 +276,7 @@ pub async fn generate_commit_message(
             \n\nUser Description:\n{}\n\nChanges:\n",
             msg
         ),
-        (None, false) => format!(
+        (None, false, false) => format!(
             "Please analyze the git diff content and generate a detailed bilingual commit message with:
                 1. First line in English: type: message (under 50 characters)
                 2. Empty line after the title
