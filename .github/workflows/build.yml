@@ -236,3 +236,5 @@ jobs:
         commit_message: $GITHUB_SHA
         ssh_keyscan_types: rsa,ed25519
         update_pkgver: false
+        force_push: true
+        allow_empty_commits: true
