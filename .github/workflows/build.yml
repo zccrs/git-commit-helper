@@ -272,7 +272,7 @@ jobs:
         git pull origin master || true
 
         # 复制修改后的文件
-        cp ../PKGBUILD .
+        cp $GITHUB_WORKSPACE/PKGBUILD .
         makepkg --printsrcinfo > .SRCINFO
 
         # 提交和推送
