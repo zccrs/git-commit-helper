@@ -198,12 +198,20 @@ jobs:
     if: github.event_name == 'push'
     steps:
     - uses: actions/checkout@v2
+      with:
+        fetch-depth: 0  # 获取完整的git历史和标签
     - name: Patch PKGBUILD for AUR
       run: |
         commit_hash="$GITHUB_SHA"
         url="https://github.com/zccrs/git-commit-helper/archive/${commit_hash}.tar.gz"
         curl -L -o "git-commit-helper-${commit_hash}.tar.gz" "$url"
         sha256=$(sha256sum "git-commit-helper-${commit_hash}.tar.gz" | awk '{print $1}')
+
+        # 调试：检查可用的标签
+        echo "=== All available tags ==="
+        git tag --list || echo "No tags found"
+        echo "=== Tags starting with 'v' ==="
+        git tag --list 'v*' || echo "No v* tags found"
 
         # 计算版本号：获取最新版本tag(v开头)和从tag到当前commit的距离
         latest_tag=$(git tag --list 'v*' --sort=-version:refname | head -1 || echo "v0.0.0")
