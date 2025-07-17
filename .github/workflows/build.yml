@@ -252,7 +252,7 @@ jobs:
         cat PKGBUILD
         echo "========================================"
     - name: Publish AUR package
-      uses: ulises-jeremias/github-actions-aur-publish@v1
+      uses: KSXGitHub/github-actions-deploy-aur@v2.7.2
       with:
         pkgname: git-commit-helper
         pkgbuild: ./PKGBUILD
@@ -260,7 +260,7 @@ jobs:
         commit_email: zccrs@live.com
         ssh_private_key: ${{ secrets.AUR_SSH_PRIVATE_KEY }}
         commit_message: $GITHUB_SHA
-        ssh_keyscan_types: rsa,ed25519
-        update_pkgver: false
+        ssh_keyscan_types: rsa,ecdsa,ed25519
+        updpkgsums: false
+        allow_empty_commits: false
         force_push: true
-        allow_empty_commits: true
