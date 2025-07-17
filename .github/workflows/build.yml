@@ -203,11 +203,27 @@ jobs:
         url="https://github.com/zccrs/git-commit-helper/archive/${commit_hash}.tar.gz"
         curl -L -o "git-commit-helper-${commit_hash}.tar.gz" "$url"
         sha256=$(sha256sum "git-commit-helper-${commit_hash}.tar.gz" | awk '{print $1}')
+
+        # 计算版本号：获取最新tag和从tag到当前commit的距离
+        latest_tag=$(git describe --tags --abbrev=0 2>/dev/null || echo "v0.0.0")
+        tag_version=$(echo "$latest_tag" | sed 's/^v//')
+        commits_since_tag=$(git rev-list --count ${latest_tag}..HEAD 2>/dev/null || echo "0")
+
+        if [ "$commits_since_tag" -gt 0 ]; then
+          # 如果有新提交，版本号格式为 tag_version.r{commit_count}.{short_hash}
+          short_hash=$(echo "$commit_hash" | cut -c1-7)
+          aur_version="${tag_version}.r${commits_since_tag}.${short_hash}"
+        else
+          # 如果没有新提交，直接使用tag版本号
+          aur_version="$tag_version"
+        fi
+
         sed -i "/^source=/c\source=(\"\$pkgname-\$pkgver.tar.gz::$url\")" PKGBUILD
         sed -i "/^sha256sums=/c\sha256sums=('$sha256')" PKGBUILD
         sed -i "s|cd \"\\\$startdir\"|cd \"\\\$srcdir/\\\$pkgname-${commit_hash}\"|g" PKGBUILD
-        # 简化 pkgver() 函数，直接返回预定义版本号，避免 git 命令
-        sed -i '/^pkgver() {/,/^}/c\pkgver() {\n    printf "%s" "$pkgver"\n}' PKGBUILD
+        # 修改 pkgver() 函数返回计算出的版本号
+        sed -i "/^pkgver=/c\pkgver=$aur_version" PKGBUILD
+        sed -i '/^pkgver() {/,/^}/c\pkgver() {\n    printf "%s" "'$aur_version'"\n}' PKGBUILD
     - name: Publish AUR package
       uses: ulises-jeremias/github-actions-aur-publish@v1
       with:
