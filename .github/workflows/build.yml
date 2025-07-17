@@ -219,12 +219,29 @@ jobs:
           aur_version="$tag_version"
         fi
 
+        # 输出调试信息
+        echo "=== DEBUG: AUR Version Calculation ==="
+        echo "Latest tag: $latest_tag"
+        echo "Tag version: $tag_version"
+        echo "Commits since tag: $commits_since_tag"
+        echo "Commit hash: $commit_hash"
+        echo "AUR version: $aur_version"
+        echo "Download URL: $url"
+        echo "SHA256: $sha256"
+        echo "=================================="
+
         sed -i "/^source=/c\source=(\"\$pkgname-\$pkgver.tar.gz::$url\")" PKGBUILD
         sed -i "/^sha256sums=/c\sha256sums=('$sha256')" PKGBUILD
         sed -i "s|cd \"\\\$startdir\"|cd \"\\\$srcdir/\\\$pkgname-${commit_hash}\"|g" PKGBUILD
         # 修改 pkgver() 函数返回计算出的版本号
         sed -i "/^pkgver=/c\pkgver=$aur_version" PKGBUILD
         sed -i '/^pkgver() {/,/^}/c\pkgver() {\n    printf "%s" "'$aur_version'"\n}' PKGBUILD
+
+        # 输出修改后的 PKGBUILD 内容以便调试
+        echo ""
+        echo "=== DEBUG: Modified PKGBUILD Content ==="
+        cat PKGBUILD
+        echo "========================================"
     - name: Publish AUR package
       uses: ulises-jeremias/github-actions-aur-publish@v1
       with:
