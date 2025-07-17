@@ -227,7 +227,7 @@ jobs:
           aur_version="$tag_version"
         fi
 
-        # 输出调试信息
+        # 输出调试信息并设置环境变量
         echo "=== DEBUG: AUR Version Calculation ==="
         echo "Latest tag: $latest_tag"
         echo "Tag version: $tag_version"
@@ -237,6 +237,9 @@ jobs:
         echo "Download URL: $url"
         echo "SHA256: $sha256"
         echo "=================================="
+
+        # 设置环境变量供后续步骤使用
+        echo "AUR_VERSION=$aur_version" >> $GITHUB_ENV
 
         sed -i "/^source=/c\source=(\"\$pkgname-\$pkgver.tar.gz::$url\")" PKGBUILD
         sed -i "/^sha256sums=/c\sha256sums=('$sha256')" PKGBUILD
@@ -259,7 +262,7 @@ jobs:
         commit_username: zccrs
         commit_email: zccrs@live.com
         ssh_private_key: ${{ secrets.AUR_SSH_PRIVATE_KEY }}
-        commit_message: $GITHUB_SHA
+        commit_message: "Update git-commit-helper to ${{ env.AUR_VERSION }} - Auto-published from GitHub Actions"
         ssh_keyscan_types: rsa,ecdsa,ed25519
         updpkgsums: false
         allow_empty_commits: false
