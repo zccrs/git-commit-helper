@@ -206,6 +206,8 @@ jobs:
         sed -i "/^source=/c\source=(\"\$pkgname-\$pkgver.tar.gz::$url\")" PKGBUILD
         sed -i "/^sha256sums=/c\sha256sums=('$sha256')" PKGBUILD
         sed -i "s|cd \"\\\$startdir\"|cd \"\\\$srcdir/\\\$pkgname-${commit_hash}\"|g" PKGBUILD
+        # 简化 pkgver() 函数，直接返回预定义版本号，避免 git 命令
+        sed -i '/^pkgver() {/,/^}/c\pkgver() {\n    printf "%s" "$pkgver"\n}' PKGBUILD
     - name: Publish AUR package
       uses: ulises-jeremias/github-actions-aur-publish@v1
       with:
