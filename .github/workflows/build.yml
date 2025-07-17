@@ -233,9 +233,10 @@ jobs:
         sed -i "/^source=/c\source=(\"\$pkgname-\$pkgver.tar.gz::$url\")" PKGBUILD
         sed -i "/^sha256sums=/c\sha256sums=('$sha256')" PKGBUILD
         sed -i "s|cd \"\\\$startdir\"|cd \"\\\$srcdir/\\\$pkgname-${commit_hash}\"|g" PKGBUILD
-        # 修改 pkgver() 函数返回计算出的版本号
+        # 修改 pkgver 并完全删除 pkgver() 函数
         sed -i "/^pkgver=/c\pkgver=$aur_version" PKGBUILD
-        sed -i '/^pkgver() {/,/^}/c\pkgver() {\n    printf "%s" "'$aur_version'"\n}' PKGBUILD
+        # 删除整个 pkgver() 函数，避免在非git环境中执行
+        sed -i '/^pkgver() {/,/^}/d' PKGBUILD
 
         # 输出修改后的 PKGBUILD 内容以便调试
         echo ""
