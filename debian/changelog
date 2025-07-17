@@ -1,3 +1,10 @@
+git-commit-helper (0.6.0) unstable; urgency=medium
+
+  * Fix variable expansion in PKGBUILD modification for AUR publishing
+  * Improve GitHub Actions workflow for better package building
+
+ -- zccrs <zhangjide@deepin.org>  Mon, 06 Jan 2025 10:00:00 +0800
+
 git-commit-helper (0.5.3) unstable; urgency=medium
 
   * Release version 0.5.3
