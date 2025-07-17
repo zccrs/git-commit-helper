@@ -254,7 +254,34 @@ jobs:
         echo "=== DEBUG: Modified PKGBUILD Content ==="
         cat PKGBUILD
         echo "========================================"
-    - name: Publish AUR package
+    - name: Fix AUR repository detached HEAD issue
+      run: |
+        # 设置SSH环境
+        mkdir -p ~/.ssh
+        echo "${{ secrets.AUR_SSH_PRIVATE_KEY }}" > ~/.ssh/aur
+        chmod 600 ~/.ssh/aur
+        ssh-keyscan -t rsa,ecdsa,ed25519 aur.archlinux.org >> ~/.ssh/known_hosts
+        eval $(ssh-agent -s)
+        ssh-add ~/.ssh/aur
+
+        # 克隆AUR仓库并修复detached HEAD问题
+        git clone ssh://aur@aur.archlinux.org/git-commit-helper.git /tmp/aur-repo
+        cd /tmp/aur-repo
+        git checkout -b master 2>/dev/null || git checkout master
+        git config pull.rebase false
+        git pull origin master || true
+
+        # 复制修改后的文件
+        cp ../PKGBUILD .
+        makepkg --printsrcinfo > .SRCINFO
+
+        # 提交和推送
+        git config user.name "zccrs"
+        git config user.email "zccrs@live.com"
+        git add PKGBUILD .SRCINFO
+        git commit -m "${{ env.AUR_VERSION && format('Update git-commit-helper to {0} - Auto-published from GitHub Actions', env.AUR_VERSION) || 'Update git-commit-helper - Auto-published from GitHub Actions' }}"
+        git push origin master
+    - name: Publish AUR package (backup method)
       uses: KSXGitHub/github-actions-deploy-aur@v2.7.2
       with:
         pkgname: git-commit-helper
