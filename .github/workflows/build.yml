@@ -205,8 +205,8 @@ jobs:
         curl -L -o "git-commit-helper-${commit_hash}.tar.gz" "$url"
         sha256=$(sha256sum "git-commit-helper-${commit_hash}.tar.gz" | awk '{print $1}')
 
-        # 计算版本号：获取最新tag和从tag到当前commit的距离
-        latest_tag=$(git describe --tags --abbrev=0 2>/dev/null || echo "v0.0.0")
+        # 计算版本号：获取最新版本tag(v开头)和从tag到当前commit的距离
+        latest_tag=$(git tag --list 'v*' --sort=-version:refname | head -1 || echo "v0.0.0")
         tag_version=$(echo "$latest_tag" | sed 's/^v//')
         commits_since_tag=$(git rev-list --count ${latest_tag}..HEAD 2>/dev/null || echo "0")
 
