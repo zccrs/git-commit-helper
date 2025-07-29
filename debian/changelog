@@ -1,3 +1,15 @@
+git-commit-helper (0.7.0) unstable; urgency=medium
+
+  * feat: add --no-log parameter and rename --no-test-suggestions to --no-influence
+  * fix: support multiple arguments for --issues parameter
+  * feat: add Log field for product-oriented change summaries
+  * feat: change testing suggestions label to Influence
+  * feat: support multiple issues in --issues parameter
+  * feat: add test suggestion disable flag
+  * Multiple workflow and build improvements
+
+ -- zccrs <zhangjide@deepin.org>  二, 29 7月 2025 14:32:18 +0800
+
 git-commit-helper (0.6.0) unstable; urgency=medium
 
   * Fix variable expansion in PKGBUILD modification for AUR publishing

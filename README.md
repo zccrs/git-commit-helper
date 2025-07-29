@@ -713,6 +713,16 @@ jobs:
 
 ## 📝 版本历史
 
+### v0.7.0
+
+- feat: 添加 --no-log 参数并重命名 --no-test-suggestions 为 --no-influence
+- fix: 支持 --issues 参数接受多个值
+- feat: 添加面向产品的日志字段功能
+- feat: 将测试建议标识改为 Influence
+- feat: 支持 --issues 参数指定多个引用
+- feat: 更新测试建议格式为数字列表
+- 多项工作流和构建改进
+
 ### v0.5.3
 
 - Release version 0.5.3

@@ -32,3 +32,6 @@ cargo-home
 /rpmbuild/
 /*.rpm
 /*.spec.rpkg
+
+#ai
+.specstory/history
