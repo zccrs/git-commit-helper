@@ -15,16 +15,16 @@ enum LanguageMode {
 fn parse_issue_reference(issues: &str) -> anyhow::Result<String> {
     let mut fixes_refs = Vec::new();
     let mut pms_refs = Vec::new();
-    
+
     // 按空格和逗号分割多个链接
     let links: Vec<&str> = issues.split_whitespace()
         .flat_map(|s| s.split(','))
         .filter(|s| !s.is_empty())
         .collect();
-    
+
     for link in links {
         let link = link.trim();
-        
+
         // 处理 GitHub issue URL
         if link.starts_with("https://github.com/") {
             match parse_github_issue(link) {
@@ -57,22 +57,22 @@ fn parse_issue_reference(issues: &str) -> anyhow::Result<String> {
             return Err(anyhow::anyhow!("无法解析 issue 引用格式: {}", link));
         }
     }
-    
+
     // 组合结果
     let mut result = Vec::new();
-    
+
     if !fixes_refs.is_empty() {
         result.push(format!("Fixes: {}", fixes_refs.join(" ")));
     }
-    
+
     if !pms_refs.is_empty() {
         result.push(format!("PMS: {}", pms_refs.join(" ")));
     }
-    
+
     if result.is_empty() {
         return Err(anyhow::anyhow!("没有找到有效的 issue 引用"));
     }
-    
+
     Ok(result.join("\n"))
 }
 
@@ -150,7 +150,7 @@ const ENGLISH_PROMPT_TEMPLATE: &str = r#"Please analyze the git diff content and
 2. Empty line after the title
 3. Detailed explanation in English (what was changed and why)
 4. Empty line after explanation
-5. Testing Suggestions section with black-box testing recommendations
+5. Influence section with black-box testing recommendations
 6. Type must be one of: feat/fix/docs/style/refactor/test/chore
 7. Focus on both WHAT changed and WHY it was necessary
 8. Include any important technical details or context
@@ -165,7 +165,7 @@ feat: add user authentication module
 3. Include password hashing with bcrypt
 4. Set up token refresh mechanism
 
-Testing Suggestions:
+Influence:
 1. Test user registration with valid and invalid inputs
 2. Verify login functionality with correct and incorrect credentials
 3. Test JWT token generation and validation
@@ -178,10 +178,10 @@ DO NOT end commit titles with any punctuation."#;
 
 const CHINESE_PROMPT_TEMPLATE: &str = r#"请分析以下 git diff 内容，并按照以下格式生成提交信息：
 1. 第一行为标题：type: message（不超过50个字符）
-2. 标题下方空一行
+
 3. 详细的中文说明（解释做了什么改动以及为什么需要这些改动）
 4. 说明下方空一行
-5. 测试建议部分，提供黑盒测试的重点和范围
+5. Influence 部分，提供黑盒测试的重点和范围
 6. type 必须是以下之一：feat/fix/docs/style/refactor/test/chore
 7. 关注点：变更内容（做了什么）和变更原因（为什么）
 8. 包含重要的技术细节或上下文
@@ -196,7 +196,7 @@ feat: 添加用户认证模块
 3. 包含使用 bcrypt 的密码哈希处理
 4. 设置令牌刷新机制
 
-测试建议：
+Influence:
 1. 测试用户注册功能，包括有效和无效输入
 2. 验证登录功能，测试正确和错误的凭据
 3. 测试 JWT 令牌生成和验证流程
@@ -209,11 +209,11 @@ const BILINGUAL_PROMPT_TEMPLATE: &str = r#"Please analyze the git diff content a
 2. Empty line after the title
 3. Detailed explanation in English (what was changed and why)
 4. Empty line after English explanation
-5. Testing Suggestions section in English with black-box testing recommendations
-6. Empty line after English testing suggestions
+5. Influence section in English with black-box testing recommendations
+
 7. Chinese title and explanation (translate the English content)
 8. Empty line after Chinese explanation
-9. Chinese Testing Suggestions section (translate the English testing suggestions)
+9. Chinese Influence section (translate the English testing suggestions)
 10. Type must be one of: feat/fix/docs/style/refactor/test/chore
 11. Focus on both WHAT changed and WHY it was necessary
 12. Include any important technical details or context
@@ -227,7 +227,7 @@ feat: add user authentication module
 3. Include password hashing with bcrypt
 4. Set up token refresh mechanism
 
-Testing Suggestions:
+Influence:
 1. Test user registration with valid and invalid inputs
 2. Verify login functionality with correct and incorrect credentials
 3. Test JWT token generation and validation
@@ -242,7 +242,7 @@ feat: 添加用户认证模块
 3. 包含使用 bcrypt 的密码哈希处理
 4. 设置令牌刷新机制
 
-测试建议：
+Influence:
 1. 测试用户注册功能，包括有效和无效输入
 2. 验证登录功能，测试正确和错误的凭据
 3. 测试 JWT 令牌生成和验证流程
@@ -738,14 +738,14 @@ mod tests {
     fn test_parse_mixed_issues_and_pms() {
         let issues = "123 https://pms.uniontech.com/bug-view-320461.html https://github.com/owner/repo/issues/456";
         let result = parse_issue_reference(issues).unwrap();
-        
+
         // 结果应该包含两行，分别是 Fixes 和 PMS
         let lines: Vec<&str> = result.lines().collect();
         assert_eq!(lines.len(), 2);
-        
+
         let fixes_line = lines.iter().find(|&&line| line.starts_with("Fixes:")).unwrap();
         let pms_line = lines.iter().find(|&&line| line.starts_with("PMS:")).unwrap();
-        
+
         assert!(fixes_line.contains("#123"));
         assert!(fixes_line.contains("owner/repo#456") || fixes_line.contains("#456"));
         assert!(pms_line.contains("BUG-320461"));
@@ -762,13 +762,13 @@ mod tests {
     fn test_parse_mixed_separators() {
         let issues = "123 456,789 https://pms.uniontech.com/task-view-374223.html";
         let result = parse_issue_reference(issues).unwrap();
-        
+
         let lines: Vec<&str> = result.lines().collect();
         assert_eq!(lines.len(), 2);
-        
+
         let fixes_line = lines.iter().find(|&&line| line.starts_with("Fixes:")).unwrap();
         let pms_line = lines.iter().find(|&&line| line.starts_with("PMS:")).unwrap();
-        
+
         assert_eq!(*fixes_line, "Fixes: #123 #456 #789");
         assert_eq!(*pms_line, "PMS: TASK-374223");
     }
