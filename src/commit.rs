@@ -13,32 +13,77 @@ enum LanguageMode {
 
 /// 解析 issues 参数并生成相应的引用字段
 fn parse_issue_reference(issues: &str) -> anyhow::Result<String> {
-    // 处理 GitHub issue URL
-    if issues.starts_with("https://github.com/") {
-        return parse_github_issue(issues);
+    let mut fixes_refs = Vec::new();
+    let mut pms_refs = Vec::new();
+    
+    // 按空格和逗号分割多个链接
+    let links: Vec<&str> = issues.split_whitespace()
+        .flat_map(|s| s.split(','))
+        .filter(|s| !s.is_empty())
+        .collect();
+    
+    for link in links {
+        let link = link.trim();
+        
+        // 处理 GitHub issue URL
+        if link.starts_with("https://github.com/") {
+            match parse_github_issue(link) {
+                Ok(ref_str) => {
+                    // 提取 Fixes: 后面的部分
+                    if let Some(fix_ref) = ref_str.strip_prefix("Fixes: ") {
+                        fixes_refs.push(fix_ref.to_string());
+                    }
+                }
+                Err(e) => return Err(e),
+            }
+        }
+        // 处理 PMS 链接
+        else if link.contains("pms.uniontech.com") {
+            match parse_pms_link(link) {
+                Ok(ref_str) => {
+                    // 提取 PMS: 后面的部分
+                    if let Some(pms_ref) = ref_str.strip_prefix("PMS: ") {
+                        pms_refs.push(pms_ref.to_string());
+                    }
+                }
+                Err(e) => return Err(e),
+            }
+        }
+        // 处理简单的 issue 数字（假设是当前项目的 GitHub issue）
+        else if let Ok(_issue_num) = link.parse::<u32>() {
+            fixes_refs.push(format!("#{}", link));
+        }
+        else {
+            return Err(anyhow::anyhow!("无法解析 issue 引用格式: {}", link));
+        }
     }
     
-    // 处理 PMS 链接
-    if issues.contains("pms.uniontech.com") {
-        return parse_pms_link(issues);
+    // 组合结果
+    let mut result = Vec::new();
+    
+    if !fixes_refs.is_empty() {
+        result.push(format!("Fixes: {}", fixes_refs.join(" ")));
     }
     
-    // 处理简单的 issue 数字（假设是当前项目的 GitHub issue）
-    if let Ok(issue_num) = issues.parse::<u32>() {
-        return Ok(format!("Fixes: #{}", issue_num));
+    if !pms_refs.is_empty() {
+        result.push(format!("PMS: {}", pms_refs.join(" ")));
     }
     
-    Err(anyhow::anyhow!("无法解析 issue 引用格式: {}", issues))
+    if result.is_empty() {
+        return Err(anyhow::anyhow!("没有找到有效的 issue 引用"));
+    }
+    
+    Ok(result.join("\n"))
 }
 
 /// 解析 GitHub issue URL 并生成 Fixes 字段
 fn parse_github_issue(url: &str) -> anyhow::Result<String> {
     let issue_regex = Regex::new(r"https://github\.com/([^/]+/[^/]+)/issues/(\d+)")?;
-    
+
     if let Some(captures) = issue_regex.captures(url) {
         let repo = captures.get(1).unwrap().as_str();
         let issue_num = captures.get(2).unwrap().as_str();
-        
+
         // 检查是否是当前项目
         if is_current_project_repo(repo)? {
             Ok(format!("Fixes: #{}", issue_num))
@@ -56,7 +101,7 @@ fn parse_pms_link(url: &str) -> anyhow::Result<String> {
     let bug_regex = Regex::new(r"bug-view-(\d+)\.html")?;
     let task_regex = Regex::new(r"task-view-(\d+)\.html")?;
     let story_regex = Regex::new(r"story-view-(\d+)\.html")?;
-    
+
     if let Some(captures) = bug_regex.captures(url) {
         let id = &captures[1];
         Ok(format!("PMS: BUG-{}", id))
@@ -74,23 +119,23 @@ fn parse_pms_link(url: &str) -> anyhow::Result<String> {
 /// 检查给定的仓库是否是当前项目的仓库
 fn is_current_project_repo(repo: &str) -> anyhow::Result<bool> {
     use std::process::Command;
-    
+
     // 获取当前仓库的远程 URL
     let output = Command::new("git")
         .args(&["remote", "get-url", "origin"])
         .output()?;
-    
+
     if !output.status.success() {
         return Ok(false);
     }
-    
+
     let remote_url = String::from_utf8_lossy(&output.stdout);
     let remote_url = remote_url.trim();
-    
+
     // 从远程 URL 中提取仓库名称
     // 支持 HTTPS 和 SSH 格式
     let repo_regex = Regex::new(r"github\.com[:/]([^/]+/[^/\.]+)")?;
-    
+
     if let Some(captures) = repo_regex.captures(remote_url) {
         let current_repo = captures.get(1).unwrap().as_str();
         Ok(current_repo == repo)
@@ -672,5 +717,64 @@ mod tests {
         let invalid = "invalid-format";
         let result = parse_issue_reference(invalid);
         assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_parse_multiple_issues() {
+        let issues = "123 456 https://github.com/owner/repo/issues/789";
+        let result = parse_issue_reference(issues).unwrap();
+        assert!(result.contains("Fixes: #123 #456"));
+        assert!(result.contains("owner/repo#789") || result.contains("#789"));
+    }
+
+    #[test]
+    fn test_parse_multiple_pms_links() {
+        let issues = "https://pms.uniontech.com/bug-view-320461.html https://pms.uniontech.com/task-view-374223.html https://pms.uniontech.com/story-view-38949.html";
+        let result = parse_pms_link_multiple(issues).unwrap();
+        assert_eq!(result, "PMS: BUG-320461 TASK-374223 STORY-38949");
+    }
+
+    #[test]
+    fn test_parse_mixed_issues_and_pms() {
+        let issues = "123 https://pms.uniontech.com/bug-view-320461.html https://github.com/owner/repo/issues/456";
+        let result = parse_issue_reference(issues).unwrap();
+        
+        // 结果应该包含两行，分别是 Fixes 和 PMS
+        let lines: Vec<&str> = result.lines().collect();
+        assert_eq!(lines.len(), 2);
+        
+        let fixes_line = lines.iter().find(|&&line| line.starts_with("Fixes:")).unwrap();
+        let pms_line = lines.iter().find(|&&line| line.starts_with("PMS:")).unwrap();
+        
+        assert!(fixes_line.contains("#123"));
+        assert!(fixes_line.contains("owner/repo#456") || fixes_line.contains("#456"));
+        assert!(pms_line.contains("BUG-320461"));
+    }
+
+    #[test]
+    fn test_parse_comma_separated_issues() {
+        let issues = "123,456,789";
+        let result = parse_issue_reference(issues).unwrap();
+        assert_eq!(result, "Fixes: #123 #456 #789");
+    }
+
+    #[test]
+    fn test_parse_mixed_separators() {
+        let issues = "123 456,789 https://pms.uniontech.com/task-view-374223.html";
+        let result = parse_issue_reference(issues).unwrap();
+        
+        let lines: Vec<&str> = result.lines().collect();
+        assert_eq!(lines.len(), 2);
+        
+        let fixes_line = lines.iter().find(|&&line| line.starts_with("Fixes:")).unwrap();
+        let pms_line = lines.iter().find(|&&line| line.starts_with("PMS:")).unwrap();
+        
+        assert_eq!(*fixes_line, "Fixes: #123 #456 #789");
+        assert_eq!(*pms_line, "PMS: TASK-374223");
+    }
+
+    // 辅助测试函数
+    fn parse_pms_link_multiple(issues: &str) -> anyhow::Result<String> {
+        parse_issue_reference(issues)
     }
 }

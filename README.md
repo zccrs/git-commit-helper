@@ -286,11 +286,16 @@ git-commit-helper commit --no-review --no-test-suggestions
 # 关联GitHub issue
 git-commit-helper commit --issues "https://github.com/owner/repo/issues/123"
 git-commit-helper commit --issues "123"  # 当前项目的issue
+git-commit-helper commit --issues "123 456 789"  # 多个issue
 
 # 关联PMS链接  
 git-commit-helper commit --issues "https://pms.uniontech.com/bug-view-320461.html"
 git-commit-helper commit --issues "https://pms.uniontech.com/task-view-374223.html"
 git-commit-helper commit --issues "https://pms.uniontech.com/story-view-38949.html"
+
+# 混合关联
+git-commit-helper commit --issues "123 https://pms.uniontech.com/bug-view-320461.html"
+git-commit-helper commit --issues "123,456 https://pms.uniontech.com/task-view-374223.html"
 ```
 
 ### AI 代码审查功能
@@ -352,33 +357,52 @@ feat: 添加用户认证模块
    - 自动识别 bug、task、story 三种类型
    - 生成标准化的 PMS 引用格式
 
-3. **引用字段格式**
+3. **多链接支持**
+   - 支持在一个命令中指定多个链接
+   - 可使用空格或逗号分隔多个链接
+   - 自动按类型分组合并同类引用
+
+4. **引用字段格式**
    - GitHub: `Fixes: #123` 或 `Fixes: owner/repo#123`
+   - 多个 GitHub: `Fixes: #123 #456 owner/repo#789`
    - PMS Bug: `PMS: BUG-320461`
    - PMS Task: `PMS: TASK-374223`
    - PMS Story: `PMS: STORY-38949`
+   - 多个 PMS: `PMS: BUG-123 TASK-456 STORY-789`
 
 使用示例：
 ```bash
-# GitHub issue (当前项目)
+# 单个 GitHub issue (当前项目)
 git-commit-helper commit --issues "123"
 # 生成: Fixes: #123
 
-# GitHub issue (其他项目)
-git-commit-helper commit --issues "https://github.com/owner/repo/issues/456"
-# 生成: Fixes: owner/repo#456
+# 多个 GitHub issue (当前项目)
+git-commit-helper commit --issues "123 456 789"
+# 生成: Fixes: #123 #456 #789
 
-# PMS Bug
-git-commit-helper commit --issues "https://pms.uniontech.com/bug-view-320461.html"
-# 生成: PMS: BUG-320461
+# 混合不同项目的 GitHub issue
+git-commit-helper commit --issues "123 https://github.com/owner/repo/issues/456"
+# 生成: Fixes: #123 owner/repo#456
 
-# PMS Task
-git-commit-helper commit --issues "https://pms.uniontech.com/task-view-374223.html" 
-# 生成: PMS: TASK-374223
+# 多个 PMS 链接
+git-commit-helper commit --issues "https://pms.uniontech.com/bug-view-320461.html https://pms.uniontech.com/task-view-374223.html"
+# 生成: PMS: BUG-320461 TASK-374223
 
-# PMS Story
-git-commit-helper commit --issues "https://pms.uniontech.com/story-view-38949.html"
-# 生成: PMS: STORY-38949
+# 混合 GitHub 和 PMS
+git-commit-helper commit --issues "123 https://pms.uniontech.com/bug-view-320461.html"
+# 生成:
+# Fixes: #123
+# PMS: BUG-320461
+
+# 使用逗号分隔
+git-commit-helper commit --issues "123,456,789"
+# 生成: Fixes: #123 #456 #789
+
+# 混合分隔符
+git-commit-helper commit --issues "123 456,https://pms.uniontech.com/task-view-374223.html"
+# 生成:
+# Fixes: #123 #456
+# PMS: TASK-374223
 ```
 
 远程代码审查功能包含：
