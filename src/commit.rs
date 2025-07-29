@@ -15,6 +15,115 @@ const ENGLISH_PROMPT_TEMPLATE: &str = r#"Please analyze the git diff content and
 1. First line: type: message (under 50 characters)
 2. Empty line after the title
 3. Detailed explanation in English (what was changed and why)
+4. Empty line after explanation
+5. Testing Suggestions section with black-box testing recommendations
+6. Type must be one of: feat/fix/docs/style/refactor/test/chore
+7. Focus on both WHAT changed and WHY it was necessary
+8. Include any important technical details or context
+9. DO NOT include any Chinese content
+10. DO NOT wrap the response in any markdown or code block markers
+
+Example response format:
+feat: add user authentication module
+
+1. Implement JWT-based authentication system
+2. Add user login and registration endpoints
+3. Include password hashing with bcrypt
+4. Set up token refresh mechanism
+
+Testing Suggestions:
+- Test user registration with valid and invalid inputs
+- Verify login functionality with correct and incorrect credentials
+- Test JWT token generation and validation
+- Verify password security and hashing
+- Test token refresh mechanism and expiration handling
+- Verify access control for protected endpoints
+
+Please respond with ONLY the commit message following this format,
+DO NOT end commit titles with any punctuation."#;
+
+const CHINESE_PROMPT_TEMPLATE: &str = r#"请分析以下 git diff 内容，并按照以下格式生成提交信息：
+1. 第一行为标题：type: message（不超过50个字符）
+2. 标题下方空一行
+3. 详细的中文说明（解释做了什么改动以及为什么需要这些改动）
+4. 说明下方空一行
+5. 测试建议部分，提供黑盒测试的重点和范围
+6. type 必须是以下之一：feat/fix/docs/style/refactor/test/chore
+7. 关注点：变更内容（做了什么）和变更原因（为什么）
+8. 包含重要的技术细节或上下文
+9. 不要使用任何 markdown 或代码块标记
+10. 标题结尾不要使用标点符号
+
+示例格式：
+feat: 添加用户认证模块
+
+1. 实现基于 JWT 的认证系统
+2. 添加用户登录和注册端点
+3. 包含使用 bcrypt 的密码哈希处理
+4. 设置令牌刷新机制
+
+测试建议：
+- 测试用户注册功能，包括有效和无效输入
+- 验证登录功能，测试正确和错误的凭据
+- 测试 JWT 令牌生成和验证流程
+- 验证密码安全性和哈希处理
+- 测试令牌刷新机制和过期处理
+- 验证受保护端点的访问控制"#;
+
+const BILINGUAL_PROMPT_TEMPLATE: &str = r#"Please analyze the git diff content and generate a detailed bilingual commit message with:
+1. First line in English: type: message (under 50 characters)
+2. Empty line after the title
+3. Detailed explanation in English (what was changed and why)
+4. Empty line after English explanation
+5. Testing Suggestions section in English with black-box testing recommendations
+6. Empty line after English testing suggestions
+7. Chinese title and explanation (translate the English content)
+8. Empty line after Chinese explanation
+9. Chinese Testing Suggestions section (translate the English testing suggestions)
+10. Type must be one of: feat/fix/docs/style/refactor/test/chore
+11. Focus on both WHAT changed and WHY it was necessary
+12. Include any important technical details or context
+13. DO NOT wrap the response in any markdown or code block markers
+
+Example response format:
+feat: add user authentication module
+
+1. Implement JWT-based authentication system
+2. Add user login and registration endpoints
+3. Include password hashing with bcrypt
+4. Set up token refresh mechanism
+
+Testing Suggestions:
+- Test user registration with valid and invalid inputs
+- Verify login functionality with correct and incorrect credentials
+- Test JWT token generation and validation
+- Verify password security and hashing
+- Test token refresh mechanism and expiration handling
+- Verify access control for protected endpoints
+
+feat: 添加用户认证模块
+
+1. 实现基于 JWT 的认证系统
+2. 添加用户登录和注册端点
+3. 包含使用 bcrypt 的密码哈希处理
+4. 设置令牌刷新机制
+
+测试建议：
+- 测试用户注册功能，包括有效和无效输入
+- 验证登录功能，测试正确和错误的凭据
+- 测试 JWT 令牌生成和验证流程
+- 验证密码安全性和哈希处理
+- 测试令牌刷新机制和过期处理
+- 验证受保护端点的访问控制
+
+Please respond with ONLY the commit message following this format,
+DO NOT end commit titles with any punctuation."#;
+
+// 无测试建议版本的提示词模板
+const ENGLISH_PROMPT_TEMPLATE_NO_TEST: &str = r#"Please analyze the git diff content and generate a commit message in English only:
+1. First line: type: message (under 50 characters)
+2. Empty line after the title
+3. Detailed explanation in English (what was changed and why)
 4. Type must be one of: feat/fix/docs/style/refactor/test/chore
 5. Focus on both WHAT changed and WHY it was necessary
 6. Include any important technical details or context
@@ -32,7 +141,7 @@ feat: add user authentication module
 Please respond with ONLY the commit message following this format,
 DO NOT end commit titles with any punctuation."#;
 
-const CHINESE_PROMPT_TEMPLATE: &str = r#"请分析以下 git diff 内容，并按照以下格式生成提交信息：
+const CHINESE_PROMPT_TEMPLATE_NO_TEST: &str = r#"请分析以下 git diff 内容，并按照以下格式生成提交信息：
 1. 第一行为标题：type: message（不超过50个字符）
 2. 标题下方空一行
 3. 详细的中文说明（解释做了什么改动以及为什么需要这些改动）
@@ -50,7 +159,7 @@ feat: 添加用户认证模块
 3. 包含使用 bcrypt 的密码哈希处理
 4. 设置令牌刷新机制"#;
 
-const BILINGUAL_PROMPT_TEMPLATE: &str = r#"Please analyze the git diff content and generate a detailed bilingual commit message with:
+const BILINGUAL_PROMPT_TEMPLATE_NO_TEST: &str = r#"Please analyze the git diff content and generate a detailed bilingual commit message with:
 1. First line in English: type: message (under 50 characters)
 2. Empty line after the title
 3. Detailed explanation in English (what was changed and why)
@@ -90,19 +199,22 @@ impl LanguageMode {
         }
     }
 
-    fn template(&self) -> &'static str {
-        match self {
-            Self::EnglishOnly => ENGLISH_PROMPT_TEMPLATE,
-            Self::ChineseOnly => CHINESE_PROMPT_TEMPLATE,
-            Self::Bilingual => BILINGUAL_PROMPT_TEMPLATE,
+    fn template(&self, include_test_suggestions: bool) -> &'static str {
+        match (self, include_test_suggestions) {
+            (Self::EnglishOnly, true) => ENGLISH_PROMPT_TEMPLATE,
+            (Self::EnglishOnly, false) => ENGLISH_PROMPT_TEMPLATE_NO_TEST,
+            (Self::ChineseOnly, true) => CHINESE_PROMPT_TEMPLATE,
+            (Self::ChineseOnly, false) => CHINESE_PROMPT_TEMPLATE_NO_TEST,
+            (Self::Bilingual, true) => BILINGUAL_PROMPT_TEMPLATE,
+            (Self::Bilingual, false) => BILINGUAL_PROMPT_TEMPLATE_NO_TEST,
         }
     }
 }
 
 // 统一的提示词构建函数
-fn build_prompt(mode: LanguageMode, user_message: Option<&str>) -> String {
-    let mut prompt = String::from(mode.template());
-    
+fn build_prompt(mode: LanguageMode, user_message: Option<&str>, include_test_suggestions: bool) -> String {
+    let mut prompt = String::from(mode.template(include_test_suggestions));
+
     if let Some(msg) = user_message {
         match mode {
             LanguageMode::ChineseOnly => {
@@ -122,7 +234,7 @@ fn build_prompt(mode: LanguageMode, user_message: Option<&str>) -> String {
             }
         }
     }
-    
+
     prompt
 }
 
@@ -229,6 +341,7 @@ pub async fn generate_commit_message(
     no_translate: bool,
     mut only_chinese: bool,
     mut only_english: bool,
+    no_test_suggestions: bool,
 ) -> anyhow::Result<()> {
     // 加载配置，如果指定了参数则使用参数值，否则使用配置中的默认值
     if let Ok(config) = config::Config::load() {
@@ -237,7 +350,7 @@ pub async fn generate_commit_message(
             only_english = config.only_english;
         }
     }
-    
+
     // 处理语言选项冲突：only_english 优先级最高
     if only_english {
         only_chinese = false;
@@ -280,9 +393,10 @@ pub async fn generate_commit_message(
     // 设置环境变量标记跳过后续的代码审查
     std::env::set_var("GIT_COMMIT_HELPER_SKIP_REVIEW", "1");
 
-    // 确定语言模式并构建提示词
+    // 确定语言模式并构建提示词，考虑是否包含测试建议
     let language_mode = LanguageMode::determine(only_chinese, only_english);
-    let prompt = build_prompt(language_mode, message.as_deref());
+    let include_test_suggestions = !no_test_suggestions;
+    let prompt = build_prompt(language_mode, message.as_deref(), include_test_suggestions);
 
     debug!("生成的提示信息：\n{}", prompt);
 
