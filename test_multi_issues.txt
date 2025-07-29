@@ -1,0 +1,9 @@
+This is a test file to demonstrate the new multi-issues functionality.
+
+Test cases:
+1. Multiple GitHub issues: 123 456 789
+2. Multiple PMS links: bug-view-320461.html task-view-374223.html story-view-38949.html
+3. Mixed GitHub and PMS: 123 https://pms.uniontech.com/bug-view-320461.html
+4. Comma-separated: 123,456,789
+
+This file will be used to test the --issues parameter with various combinations.
