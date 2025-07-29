@@ -32,12 +32,12 @@ feat: add user authentication module
 4. Set up token refresh mechanism
 
 Testing Suggestions:
-- Test user registration with valid and invalid inputs
-- Verify login functionality with correct and incorrect credentials
-- Test JWT token generation and validation
-- Verify password security and hashing
-- Test token refresh mechanism and expiration handling
-- Verify access control for protected endpoints
+1. Test user registration with valid and invalid inputs
+2. Verify login functionality with correct and incorrect credentials
+3. Test JWT token generation and validation
+4. Verify password security and hashing
+5. Test token refresh mechanism and expiration handling
+6. Verify access control for protected endpoints
 
 Please respond with ONLY the commit message following this format,
 DO NOT end commit titles with any punctuation."#;
@@ -63,12 +63,12 @@ feat: 添加用户认证模块
 4. 设置令牌刷新机制
 
 测试建议：
-- 测试用户注册功能，包括有效和无效输入
-- 验证登录功能，测试正确和错误的凭据
-- 测试 JWT 令牌生成和验证流程
-- 验证密码安全性和哈希处理
-- 测试令牌刷新机制和过期处理
-- 验证受保护端点的访问控制"#;
+1. 测试用户注册功能，包括有效和无效输入
+2. 验证登录功能，测试正确和错误的凭据
+3. 测试 JWT 令牌生成和验证流程
+4. 验证密码安全性和哈希处理
+5. 测试令牌刷新机制和过期处理
+6. 验证受保护端点的访问控制"#;
 
 const BILINGUAL_PROMPT_TEMPLATE: &str = r#"Please analyze the git diff content and generate a detailed bilingual commit message with:
 1. First line in English: type: message (under 50 characters)
@@ -94,12 +94,12 @@ feat: add user authentication module
 4. Set up token refresh mechanism
 
 Testing Suggestions:
-- Test user registration with valid and invalid inputs
-- Verify login functionality with correct and incorrect credentials
-- Test JWT token generation and validation
-- Verify password security and hashing
-- Test token refresh mechanism and expiration handling
-- Verify access control for protected endpoints
+1. Test user registration with valid and invalid inputs
+2. Verify login functionality with correct and incorrect credentials
+3. Test JWT token generation and validation
+4. Verify password security and hashing
+5. Test token refresh mechanism and expiration handling
+6. Verify access control for protected endpoints
 
 feat: 添加用户认证模块
 
@@ -109,12 +109,12 @@ feat: 添加用户认证模块
 4. 设置令牌刷新机制
 
 测试建议：
-- 测试用户注册功能，包括有效和无效输入
-- 验证登录功能，测试正确和错误的凭据
-- 测试 JWT 令牌生成和验证流程
-- 验证密码安全性和哈希处理
-- 测试令牌刷新机制和过期处理
-- 验证受保护端点的访问控制
+1. 测试用户注册功能，包括有效和无效输入
+2. 验证登录功能，测试正确和错误的凭据
+3. 测试 JWT 令牌生成和验证流程
+4. 验证密码安全性和哈希处理
+5. 测试令牌刷新机制和过期处理
+6. 验证受保护端点的访问控制
 
 Please respond with ONLY the commit message following this format,
 DO NOT end commit titles with any punctuation."#;
