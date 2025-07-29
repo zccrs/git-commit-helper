@@ -1,6 +1,7 @@
 use regex::Regex;
 use crate::ai_service;
 use crate::config;
+use crate::git;
 
 // 语言模式枚举
 #[derive(Debug, Clone, Copy)]
@@ -8,6 +9,94 @@ enum LanguageMode {
     ChineseOnly,
     EnglishOnly,
     Bilingual,
+}
+
+/// 解析 issues 参数并生成相应的引用字段
+fn parse_issue_reference(issues: &str) -> anyhow::Result<String> {
+    // 处理 GitHub issue URL
+    if issues.starts_with("https://github.com/") {
+        return parse_github_issue(issues);
+    }
+    
+    // 处理 PMS 链接
+    if issues.contains("pms.uniontech.com") {
+        return parse_pms_link(issues);
+    }
+    
+    // 处理简单的 issue 数字（假设是当前项目的 GitHub issue）
+    if let Ok(issue_num) = issues.parse::<u32>() {
+        return Ok(format!("Fixes: #{}", issue_num));
+    }
+    
+    Err(anyhow::anyhow!("无法解析 issue 引用格式: {}", issues))
+}
+
+/// 解析 GitHub issue URL 并生成 Fixes 字段
+fn parse_github_issue(url: &str) -> anyhow::Result<String> {
+    let issue_regex = Regex::new(r"https://github\.com/([^/]+/[^/]+)/issues/(\d+)")?;
+    
+    if let Some(captures) = issue_regex.captures(url) {
+        let repo = captures.get(1).unwrap().as_str();
+        let issue_num = captures.get(2).unwrap().as_str();
+        
+        // 检查是否是当前项目
+        if is_current_project_repo(repo)? {
+            Ok(format!("Fixes: #{}", issue_num))
+        } else {
+            Ok(format!("Fixes: {}#{}", repo, issue_num))
+        }
+    } else {
+        Err(anyhow::anyhow!("无效的 GitHub issue URL 格式: {}", url))
+    }
+}
+
+/// 解析 PMS 链接并生成 PMS 字段
+fn parse_pms_link(url: &str) -> anyhow::Result<String> {
+    // 匹配 bug-view、task-view、story-view 格式
+    let bug_regex = Regex::new(r"bug-view-(\d+)\.html")?;
+    let task_regex = Regex::new(r"task-view-(\d+)\.html")?;
+    let story_regex = Regex::new(r"story-view-(\d+)\.html")?;
+    
+    if let Some(captures) = bug_regex.captures(url) {
+        let id = &captures[1];
+        Ok(format!("PMS: BUG-{}", id))
+    } else if let Some(captures) = task_regex.captures(url) {
+        let id = &captures[1];
+        Ok(format!("PMS: TASK-{}", id))
+    } else if let Some(captures) = story_regex.captures(url) {
+        let id = &captures[1];
+        Ok(format!("PMS: STORY-{}", id))
+    } else {
+        Err(anyhow::anyhow!("无效的 PMS 链接格式: {}", url))
+    }
+}
+
+/// 检查给定的仓库是否是当前项目的仓库
+fn is_current_project_repo(repo: &str) -> anyhow::Result<bool> {
+    use std::process::Command;
+    
+    // 获取当前仓库的远程 URL
+    let output = Command::new("git")
+        .args(&["remote", "get-url", "origin"])
+        .output()?;
+    
+    if !output.status.success() {
+        return Ok(false);
+    }
+    
+    let remote_url = String::from_utf8_lossy(&output.stdout);
+    let remote_url = remote_url.trim();
+    
+    // 从远程 URL 中提取仓库名称
+    // 支持 HTTPS 和 SSH 格式
+    let repo_regex = Regex::new(r"github\.com[:/]([^/]+/[^/\.]+)")?;
+    
+    if let Some(captures) = repo_regex.captures(remote_url) {
+        let current_repo = captures.get(1).unwrap().as_str();
+        Ok(current_repo == repo)
+    } else {
+        Ok(false)
+    }
 }
 
 // 提示词模板常量
@@ -327,7 +416,6 @@ impl CommitMessage {
     }
 }
 
-use crate::git;
 use crate::review;
 use dialoguer::Confirm;
 use log::{debug, info};
@@ -342,6 +430,7 @@ pub async fn generate_commit_message(
     mut only_chinese: bool,
     mut only_english: bool,
     no_test_suggestions: bool,
+    issues: Option<String>,
 ) -> anyhow::Result<()> {
     // 加载配置，如果指定了参数则使用参数值，否则使用配置中的默认值
     if let Ok(config) = config::Config::load() {
@@ -417,13 +506,30 @@ pub async fn generate_commit_message(
     }
 
     // 处理换行
-    let content = message.lines().map(|line| {
+    let mut content = message.lines().map(|line| {
         if line.trim().is_empty() {
             line.to_string()
         } else {
             git::wrap_text(line, 72)
         }
     }).collect::<Vec<_>>().join("\n");
+
+    // 如果指定了 issues 参数，添加引用字段
+    if let Some(issues_str) = issues {
+        match parse_issue_reference(&issues_str) {
+            Ok(reference) => {
+                // 在提交信息末尾添加空行和引用字段
+                if !content.ends_with('\n') {
+                    content.push('\n');
+                }
+                content.push('\n');
+                content.push_str(&reference);
+            }
+            Err(e) => {
+                eprintln!("警告: 解析 issues 参数失败: {}", e);
+            }
+        }
+    }
 
     // 预览生成的提交信息
     println!("\n生成的提交信息预览:");
@@ -519,4 +625,52 @@ fn ensure_commit_type(message: &str, commit_types: &[String]) -> String {
     }
 
     message.to_string()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_parse_github_issue_url() {
+        let url = "https://github.com/zccrs/git-commit-helper/issues/123";
+        let result = parse_github_issue(url).unwrap();
+        // 由于无法在测试环境中获取git remote，这里只测试格式解析
+        assert!(result.contains("#123") || result.contains("zccrs/git-commit-helper#123"));
+    }
+
+    #[test]
+    fn test_parse_pms_bug_link() {
+        let url = "https://pms.uniontech.com/bug-view-320461.html";
+        let result = parse_pms_link(url).unwrap();
+        assert_eq!(result, "PMS: BUG-320461");
+    }
+
+    #[test]
+    fn test_parse_pms_task_link() {
+        let url = "https://pms.uniontech.com/task-view-374223.html";
+        let result = parse_pms_link(url).unwrap();
+        assert_eq!(result, "PMS: TASK-374223");
+    }
+
+    #[test]
+    fn test_parse_pms_story_link() {
+        let url = "https://pms.uniontech.com/story-view-38949.html";
+        let result = parse_pms_link(url).unwrap();
+        assert_eq!(result, "PMS: STORY-38949");
+    }
+
+    #[test]
+    fn test_parse_issue_number() {
+        let issue = "123";
+        let result = parse_issue_reference(issue).unwrap();
+        assert_eq!(result, "Fixes: #123");
+    }
+
+    #[test]
+    fn test_parse_invalid_format() {
+        let invalid = "invalid-format";
+        let result = parse_issue_reference(invalid);
+        assert!(result.is_err());
+    }
 }

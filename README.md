@@ -193,7 +193,7 @@ git-commit-helper translate /path/to/existing/file    # 文件路径
 | ai list | 列出所有服务 | `git-commit-helper ai list` |
 | ai test | 测试指定服务 | `git-commit-helper ai test [-t "测试文本"]` |
 | translate | 翻译内容 | `git-commit-helper translate [-f 文件] [-t 文本]` |
-| commit | 生成提交信息 | `git-commit-helper commit [-t 类型] [-m 描述] [-a] [--no-review/--no-test-suggestions/--only-chinese/--only-english]` |
+| commit | 生成提交信息 | `git-commit-helper commit [-t 类型] [-m 描述] [-a] [--no-review/--no-test-suggestions/--only-chinese/--only-english] [--issues ISSUE]` |
 | ai-review | 管理 AI 代码审查 | `git-commit-helper ai-review [--enable/--disable/--status]` |
 
 ### 提交类型
@@ -241,6 +241,7 @@ git-commit-helper commit [选项]
     --no-test-suggestions    禁用当前提交的测试建议功能
     --only-chinese           仅保留中文提交信息
     --only-english           仅保留英文提交信息
+    --issues <ISSUE>         关联GitHub issue或PMS链接
 ```
 
 示例：
@@ -281,6 +282,15 @@ git-commit-helper commit --no-test-suggestions
 
 # 同时禁用代码审查和测试建议
 git-commit-helper commit --no-review --no-test-suggestions
+
+# 关联GitHub issue
+git-commit-helper commit --issues "https://github.com/owner/repo/issues/123"
+git-commit-helper commit --issues "123"  # 当前项目的issue
+
+# 关联PMS链接  
+git-commit-helper commit --issues "https://pms.uniontech.com/bug-view-320461.html"
+git-commit-helper commit --issues "https://pms.uniontech.com/task-view-374223.html"
+git-commit-helper commit --issues "https://pms.uniontech.com/story-view-38949.html"
 ```
 
 ### AI 代码审查功能
@@ -326,6 +336,49 @@ feat: 添加用户认证模块
 4. 验证密码安全性和哈希处理
 5. 测试令牌刷新机制和过期处理
 6. 验证受保护端点的访问控制
+```
+
+### Issue 关联功能
+
+工具支持在提交信息中自动关联 GitHub issue 和 PMS 链接，使提交与相关任务建立明确的关联关系：
+
+1. **GitHub Issue 关联**
+   - 支持完整的 GitHub issue URL
+   - 支持当前项目的 issue 编号
+   - 自动检测是否为同一项目，生成合适的引用格式
+
+2. **PMS 链接关联**
+   - 支持联创工程管理系统（PMS）的链接
+   - 自动识别 bug、task、story 三种类型
+   - 生成标准化的 PMS 引用格式
+
+3. **引用字段格式**
+   - GitHub: `Fixes: #123` 或 `Fixes: owner/repo#123`
+   - PMS Bug: `PMS: BUG-320461`
+   - PMS Task: `PMS: TASK-374223`
+   - PMS Story: `PMS: STORY-38949`
+
+使用示例：
+```bash
+# GitHub issue (当前项目)
+git-commit-helper commit --issues "123"
+# 生成: Fixes: #123
+
+# GitHub issue (其他项目)
+git-commit-helper commit --issues "https://github.com/owner/repo/issues/456"
+# 生成: Fixes: owner/repo#456
+
+# PMS Bug
+git-commit-helper commit --issues "https://pms.uniontech.com/bug-view-320461.html"
+# 生成: PMS: BUG-320461
+
+# PMS Task
+git-commit-helper commit --issues "https://pms.uniontech.com/task-view-374223.html" 
+# 生成: PMS: TASK-374223
+
+# PMS Story
+git-commit-helper commit --issues "https://pms.uniontech.com/story-view-38949.html"
+# 生成: PMS: STORY-38949
 ```
 
 远程代码审查功能包含：
