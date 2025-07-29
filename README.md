@@ -197,7 +197,7 @@ git-commit-helper translate /path/to/existing/file    # 文件路径
 | ai list | 列出所有服务 | `git-commit-helper ai list` |
 | ai test | 测试指定服务 | `git-commit-helper ai test [-t "测试文本"]` |
 | translate | 翻译内容 | `git-commit-helper translate [-f 文件] [-t 文本]` |
-| commit | 生成提交信息 | `git-commit-helper commit [-t 类型] [-m 描述] [-a] [--no-review/--no-test-suggestions/--only-chinese/--only-english] [--issues ISSUE]` |
+| commit | 生成提交信息 | `git-commit-helper commit [-t 类型] [-m 描述] [-a] [--no-review/--no-test-suggestions/--only-chinese/--only-english] [--issues ISSUE...]` |
 | ai-review | 管理 AI 代码审查 | `git-commit-helper ai-review [--enable/--disable/--status]` |
 
 ### 提交类型
@@ -245,7 +245,7 @@ git-commit-helper commit [选项]
     --no-test-suggestions    禁用当前提交的测试建议功能
     --only-chinese           仅保留中文提交信息
     --only-english           仅保留英文提交信息
-    --issues <ISSUE>         关联GitHub issue或PMS链接
+    --issues [ISSUE...]      关联多个GitHub issue或PMS链接
 ```
 
 示例：
@@ -290,16 +290,16 @@ git-commit-helper commit --no-review --no-test-suggestions
 # 关联GitHub issue
 git-commit-helper commit --issues "https://github.com/owner/repo/issues/123"
 git-commit-helper commit --issues "123"  # 当前项目的issue
-git-commit-helper commit --issues "123 456 789"  # 多个issue
+git-commit-helper commit --issues "123" "456" "789"  # 多个issue
 
-# 关联PMS链接
+# 关联PMS链接  
 git-commit-helper commit --issues "https://pms.uniontech.com/bug-view-320461.html"
 git-commit-helper commit --issues "https://pms.uniontech.com/task-view-374223.html"
 git-commit-helper commit --issues "https://pms.uniontech.com/story-view-38949.html"
 
 # 混合关联
-git-commit-helper commit --issues "123 https://pms.uniontech.com/bug-view-320461.html"
-git-commit-helper commit --issues "123,456 https://pms.uniontech.com/task-view-374223.html"
+git-commit-helper commit --issues "123" "https://pms.uniontech.com/bug-view-320461.html"
+git-commit-helper commit --issues "https://github.com/owner/repo/issues/123" "https://pms.uniontech.com/task-view-374223.html"
 ```
 
 ### AI 代码审查功能

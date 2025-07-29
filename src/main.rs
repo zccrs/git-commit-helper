@@ -96,8 +96,8 @@ enum Commands {
         #[arg(long)]
         no_test_suggestions: bool,
         /// 关联的GitHub issue或PMS链接
-        #[arg(long)]
-        issues: Option<String>,
+        #[arg(long, value_delimiter = ' ', num_args = 0..)]
+        issues: Vec<String>,
     },
     /// 管理 AI 代码审查功能
     #[command(name = "ai-review")]
@@ -411,7 +411,12 @@ async fn main() -> Result<()> {
             }
         }
         Some(Commands::Commit { r#type, message, all, no_translate, only_chinese, only_english, no_test_suggestions, issues }) => {
-            commit::generate_commit_message(r#type, message, all, cli.no_review, no_translate, only_chinese, only_english, no_test_suggestions, issues).await
+            let issues_str = if issues.is_empty() {
+                None
+            } else {
+                Some(issues.join(" "))
+            };
+            commit::generate_commit_message(r#type, message, all, cli.no_review, no_translate, only_chinese, only_english, no_test_suggestions, issues_str).await
         }
         Some(Commands::AIReview { enable, disable, status }) => {
             let mut config = config::Config::load()?;
