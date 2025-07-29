@@ -92,9 +92,12 @@ enum Commands {
         /// 仅保留英文提交信息
         #[arg(long = "only-english")]
         only_english: bool,
-        /// 禁用测试建议
+        /// 禁用影响分析（测试建议）
         #[arg(long)]
-        no_test_suggestions: bool,
+        no_influence: bool,
+        /// 禁用产品日志字段
+        #[arg(long)]
+        no_log: bool,
         /// 关联的GitHub issue或PMS链接
         #[arg(long, value_delimiter = ' ', num_args = 0..)]
         issues: Vec<String>,
@@ -410,13 +413,13 @@ async fn main() -> Result<()> {
                 Err(e) => Err(e)
             }
         }
-        Some(Commands::Commit { r#type, message, all, no_translate, only_chinese, only_english, no_test_suggestions, issues }) => {
+        Some(Commands::Commit { r#type, message, all, no_translate, only_chinese, only_english, no_influence, no_log, issues }) => {
             let issues_str = if issues.is_empty() {
                 None
             } else {
                 Some(issues.join(" "))
             };
-            commit::generate_commit_message(r#type, message, all, cli.no_review, no_translate, only_chinese, only_english, no_test_suggestions, issues_str).await
+            commit::generate_commit_message(r#type, message, all, cli.no_review, no_translate, only_chinese, only_english, no_influence, no_log, issues_str).await
         }
         Some(Commands::AIReview { enable, disable, status }) => {
             let mut config = config::Config::load()?;
