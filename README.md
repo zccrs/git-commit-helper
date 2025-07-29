@@ -46,6 +46,10 @@
   - 基于代码变更智能生成黑盒测试建议
   - 关注测试重点和覆盖范围
   - 可通过参数禁用
+- 📝 产品日志
+  - 智能识别用户可感知的功能变化
+  - 自动生成面向用户的功能说明
+  - 仅在涉及产品功能时添加
 
 ## 📦 安装
 
@@ -288,7 +292,7 @@ git-commit-helper commit --issues "https://github.com/owner/repo/issues/123"
 git-commit-helper commit --issues "123"  # 当前项目的issue
 git-commit-helper commit --issues "123 456 789"  # 多个issue
 
-# 关联PMS链接  
+# 关联PMS链接
 git-commit-helper commit --issues "https://pms.uniontech.com/bug-view-320461.html"
 git-commit-helper commit --issues "https://pms.uniontech.com/task-view-374223.html"
 git-commit-helper commit --issues "https://pms.uniontech.com/story-view-38949.html"
@@ -333,6 +337,8 @@ feat: 添加用户认证模块
 2. 添加用户登录和注册端点
 3. 包含使用 bcrypt 的密码哈希处理
 4. 设置令牌刷新机制
+
+Log: 新增用户登录注册功能
 
 Influence:
 1. 测试用户注册功能，包括有效和无效输入
@@ -403,6 +409,63 @@ git-commit-helper commit --issues "123 456,https://pms.uniontech.com/task-view-3
 # 生成:
 # Fixes: #123 #456
 # PMS: TASK-374223
+```
+
+### 产品日志功能
+
+工具支持自动生成产品导向的日志字段，帮助产品经理向用户清晰传达功能变化：
+
+1. **智能识别用户功能**
+   - 自动判断变更是否涉及用户可感知的功能
+   - 仅在真正的产品功能变化时生成Log字段
+   - 过滤纯技术性或内部实现的修改
+
+2. **面向用户的表达**
+   - 使用用户易懂的语言描述功能变化
+   - 专注于功能价值而非技术细节
+   - 适合产品发布说明和用户沟通
+
+3. **应用场景**
+   - 新功能发布：`Log: 新增深色模式主题`
+   - UI改进：`Log: 优化搜索界面交互体验`
+   - 功能修复：`Log: 修复无法保存文件的问题`
+   - 设置增强：`Log: 支持设置鼠标光标大小`
+
+4. **不生成Log的情况**
+   - 代码重构或架构调整
+   - 依赖库更新或版本升级
+   - 内部工具或开发环境配置
+   - 纯技术性能优化（用户无感知）
+
+使用示例：
+```bash
+# 添加用户功能时会生成Log字段
+git-commit-helper commit
+# 可能生成:
+# feat: add dark mode theme support
+#
+# 1. Implement theme switching mechanism
+# 2. Add dark mode color scheme
+# 3. Update all UI components for theme support
+#
+# Log: 新增深色模式主题
+#
+# Influence:
+# 1. Test theme switching in different scenarios
+# 2. Verify color contrast meets accessibility standards
+
+# 技术重构时不会生成Log字段
+git-commit-helper commit
+# 可能生成:
+# refactor: optimize database query performance
+#
+# 1. Replace N+1 queries with batch loading
+# 2. Add database connection pooling
+# 3. Optimize slow query indexes
+#
+# Influence:
+# 1. Test query performance under load
+# 2. Verify data consistency after optimization
 ```
 
 远程代码审查功能包含：

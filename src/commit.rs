@@ -150,12 +150,14 @@ const ENGLISH_PROMPT_TEMPLATE: &str = r#"Please analyze the git diff content and
 2. Empty line after the title
 3. Detailed explanation in English (what was changed and why)
 4. Empty line after explanation
-5. Influence section with black-box testing recommendations
-6. Type must be one of: feat/fix/docs/style/refactor/test/chore
-7. Focus on both WHAT changed and WHY it was necessary
-8. Include any important technical details or context
-9. DO NOT include any Chinese content
-10. DO NOT wrap the response in any markdown or code block markers
+5. Log field (ONLY if this change involves user-facing features/UI changes that product managers would communicate to users)
+6. Empty line after Log field (if present)
+7. Influence section with black-box testing recommendations
+8. Type must be one of: feat/fix/docs/style/refactor/test/chore
+9. Focus on both WHAT changed and WHY it was necessary
+10. Include any important technical details or context
+11. DO NOT include any Chinese content
+12. DO NOT wrap the response in any markdown or code block markers
 
 Example response format:
 feat: add user authentication module
@@ -164,6 +166,8 @@ feat: add user authentication module
 2. Add user login and registration endpoints
 3. Include password hashing with bcrypt
 4. Set up token refresh mechanism
+
+Log: Added user authentication feature with login and registration
 
 Influence:
 1. Test user registration with valid and invalid inputs
@@ -181,12 +185,14 @@ const CHINESE_PROMPT_TEMPLATE: &str = r#"请分析以下 git diff 内容，并�
 
 3. 详细的中文说明（解释做了什么改动以及为什么需要这些改动）
 4. 说明下方空一行
-5. Influence 部分，提供黑盒测试的重点和范围
-6. type 必须是以下之一：feat/fix/docs/style/refactor/test/chore
-7. 关注点：变更内容（做了什么）和变更原因（为什么）
-8. 包含重要的技术细节或上下文
-9. 不要使用任何 markdown 或代码块标记
-10. 标题结尾不要使用标点符号
+5. Log 字段（仅当此次变更涉及用户可感知的功能/UI层面变化，产品经理会向用户说明的内容时才添加）
+6. Log 字段下方空一行（如果存在 Log 字段）
+7. Influence 部分，提供黑盒测试的重点和范围
+8. type 必须是以下之一：feat/fix/docs/style/refactor/test/chore
+9. 关注点：变更内容（做了什么）和变更原因（为什么）
+10. 包含重要的技术细节或上下文
+11. 不要使用任何 markdown 或代码块标记
+12. 标题结尾不要使用标点符号
 
 示例格式：
 feat: 添加用户认证模块
@@ -195,6 +201,8 @@ feat: 添加用户认证模块
 2. 添加用户登录和注册端点
 3. 包含使用 bcrypt 的密码哈希处理
 4. 设置令牌刷新机制
+
+Log: 新增用户登录注册功能
 
 Influence:
 1. 测试用户注册功能，包括有效和无效输入
@@ -209,15 +217,19 @@ const BILINGUAL_PROMPT_TEMPLATE: &str = r#"Please analyze the git diff content a
 2. Empty line after the title
 3. Detailed explanation in English (what was changed and why)
 4. Empty line after English explanation
-5. Influence section in English with black-box testing recommendations
+5. Log field in English (ONLY if this change involves user-facing features/UI changes)
+6. Empty line after English Log field (if present)
+7. Influence section in English with black-box testing recommendations
 
-7. Chinese title and explanation (translate the English content)
-8. Empty line after Chinese explanation
-9. Chinese Influence section (translate the English testing suggestions)
-10. Type must be one of: feat/fix/docs/style/refactor/test/chore
-11. Focus on both WHAT changed and WHY it was necessary
-12. Include any important technical details or context
-13. DO NOT wrap the response in any markdown or code block markers
+9. Chinese title and explanation (translate the English content)
+10. Empty line after Chinese explanation
+11. Chinese Log field (translate the English Log field, only if present)
+12. Empty line after Chinese Log field (if present)
+13. Chinese Influence section (translate the English testing suggestions)
+14. Type must be one of: feat/fix/docs/style/refactor/test/chore
+15. Focus on both WHAT changed and WHY it was necessary
+16. Include any important technical details or context
+17. DO NOT wrap the response in any markdown or code block markers
 
 Example response format:
 feat: add user authentication module
@@ -226,6 +238,8 @@ feat: add user authentication module
 2. Add user login and registration endpoints
 3. Include password hashing with bcrypt
 4. Set up token refresh mechanism
+
+Log: Added user authentication feature with login and registration
 
 Influence:
 1. Test user registration with valid and invalid inputs
@@ -241,6 +255,8 @@ feat: 添加用户认证模块
 2. 添加用户登录和注册端点
 3. 包含使用 bcrypt 的密码哈希处理
 4. 设置令牌刷新机制
+
+Log: 新增用户登录注册功能
 
 Influence:
 1. 测试用户注册功能，包括有效和无效输入
@@ -258,11 +274,13 @@ const ENGLISH_PROMPT_TEMPLATE_NO_TEST: &str = r#"Please analyze the git diff con
 1. First line: type: message (under 50 characters)
 2. Empty line after the title
 3. Detailed explanation in English (what was changed and why)
-4. Type must be one of: feat/fix/docs/style/refactor/test/chore
-5. Focus on both WHAT changed and WHY it was necessary
-6. Include any important technical details or context
-7. DO NOT include any Chinese content
-8. DO NOT wrap the response in any markdown or code block markers
+4. Empty line after explanation
+5. Log field (ONLY if this change involves user-facing features/UI changes that product managers would communicate to users)
+6. Type must be one of: feat/fix/docs/style/refactor/test/chore
+7. Focus on both WHAT changed and WHY it was necessary
+8. Include any important technical details or context
+9. DO NOT include any Chinese content
+10. DO NOT wrap the response in any markdown or code block markers
 
 Example response format:
 feat: add user authentication module
@@ -271,6 +289,8 @@ feat: add user authentication module
 2. Add user login and registration endpoints
 3. Include password hashing with bcrypt
 4. Set up token refresh mechanism
+
+Log: Added user authentication feature with login and registration
 
 Please respond with ONLY the commit message following this format,
 DO NOT end commit titles with any punctuation."#;
@@ -279,11 +299,13 @@ const CHINESE_PROMPT_TEMPLATE_NO_TEST: &str = r#"请分析以下 git diff 内容
 1. 第一行为标题：type: message（不超过50个字符）
 2. 标题下方空一行
 3. 详细的中文说明（解释做了什么改动以及为什么需要这些改动）
-4. type 必须是以下之一：feat/fix/docs/style/refactor/test/chore
-5. 关注点：变更内容（做了什么）和变更原因（为什么）
-6. 包含重要的技术细节或上下文
-7. 不要使用任何 markdown 或代码块标记
-8. 标题结尾不要使用标点符号
+4. 说明下方空一行
+5. Log 字段（仅当此次变更涉及用户可感知的功能/UI层面变化时才添加）
+6. type 必须是以下之一：feat/fix/docs/style/refactor/test/chore
+7. 关注点：变更内容（做了什么）和变更原因（为什么）
+8. 包含重要的技术细节或上下文
+9. 不要使用任何 markdown 或代码块标记
+10. 标题结尾不要使用标点符号
 
 示例格式：
 feat: 添加用户认证模块
@@ -291,18 +313,24 @@ feat: 添加用户认证模块
 1. 实现基于 JWT 的认证系统
 2. 添加用户登录和注册端点
 3. 包含使用 bcrypt 的密码哈希处理
-4. 设置令牌刷新机制"#;
+4. 设置令牌刷新机制
+
+Log: 新增用户登录注册功能"#;
 
 const BILINGUAL_PROMPT_TEMPLATE_NO_TEST: &str = r#"Please analyze the git diff content and generate a detailed bilingual commit message with:
 1. First line in English: type: message (under 50 characters)
 2. Empty line after the title
 3. Detailed explanation in English (what was changed and why)
 4. Empty line after English explanation
-5. Chinese title and explanation (translate the English content)
-6. Type must be one of: feat/fix/docs/style/refactor/test/chore
-7. Focus on both WHAT changed and WHY it was necessary
-8. Include any important technical details or context
-9. DO NOT wrap the response in any markdown or code block markers
+5. Log field in English (ONLY if this change involves user-facing features/UI changes)
+6. Empty line after English Log field (if present)
+7. Chinese title and explanation (translate the English content)
+8. Empty line after Chinese explanation
+9. Chinese Log field (translate the English Log field, only if present)
+10. Type must be one of: feat/fix/docs/style/refactor/test/chore
+11. Focus on both WHAT changed and WHY it was necessary
+12. Include any important technical details or context
+13. DO NOT wrap the response in any markdown or code block markers
 
 Example response format:
 feat: add user authentication module
@@ -312,12 +340,16 @@ feat: add user authentication module
 3. Include password hashing with bcrypt
 4. Set up token refresh mechanism
 
+Log: Added user authentication feature with login and registration
+
 feat: 添加用户认证模块
 
 1. 实现基于 JWT 的认证系统
 2. 添加用户登录和注册端点
 3. 包含使用 bcrypt 的密码哈希处理
 4. 设置令牌刷新机制
+
+Log: 新增用户登录注册功能
 
 Please respond with ONLY the commit message following this format,
 DO NOT end commit titles with any punctuation."#;
