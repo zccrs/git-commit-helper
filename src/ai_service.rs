@@ -133,7 +133,7 @@ impl GeminiTranslator {
             endpoint: config.api_endpoint.clone()
                 .unwrap_or_else(|| "https://generativelanguage.googleapis.com/v1beta".into()),
             model: config.model.clone()
-                .unwrap_or_else(|| "gemini-pro".into()),
+                .unwrap_or_else(|| "gemini-2.0-flash".into()),
             timeout_seconds: crate::config::Config::load()
                 .map(|c| c.timeout_seconds)
                 .unwrap_or(20),

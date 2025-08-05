@@ -849,7 +849,7 @@ impl Config {
             AIService::OpenAI => "gpt-3.5-turbo",
             AIService::Claude => "claude-3-sonnet-20240229",
             AIService::Copilot => "copilot-chat",
-            AIService::Gemini => "gemini-pro",
+            AIService::Gemini => "gemini-2.0-flash",
             AIService::Grok => "grok-3-latest",
             AIService::Qwen => "qwen-plus",
         };
