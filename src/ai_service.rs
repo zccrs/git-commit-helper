@@ -37,6 +37,7 @@ pub struct OpenAITranslator {
     endpoint: String,
     model: String,
     timeout_seconds: u64,
+    max_tokens: u64,
 }
 
 pub struct ClaudeTranslator {
@@ -44,6 +45,7 @@ pub struct ClaudeTranslator {
     endpoint: String,
     model: String,
     timeout_seconds: u64,
+    max_tokens: u64,
 }
 
 pub struct CopilotTranslator {
@@ -56,6 +58,7 @@ pub struct GeminiTranslator {
     endpoint: String,
     model: String,
     timeout_seconds: u64,
+    max_tokens: u64,
 }
 
 pub struct GrokTranslator {
@@ -63,6 +66,7 @@ pub struct GrokTranslator {
     endpoint: String,
     model: String,
     timeout_seconds: u64,
+    max_tokens: u64,
 }
 
 pub struct QwenTranslator {
@@ -70,6 +74,7 @@ pub struct QwenTranslator {
     endpoint: String,
     model: String,
     timeout_seconds: u64,
+    max_tokens: u64,
 }
 
 impl DeepSeekTranslator {
@@ -101,6 +106,9 @@ impl OpenAITranslator {
             timeout_seconds: crate::config::Config::load()
                 .map(|c| c.timeout_seconds)
                 .unwrap_or(20),
+            max_tokens: crate::config::Config::load()
+                .map(|c| c.max_tokens)
+                .unwrap_or(2048),
         }
     }
 }
@@ -116,6 +124,9 @@ impl ClaudeTranslator {
             timeout_seconds: crate::config::Config::load()
                 .map(|c| c.timeout_seconds)
                 .unwrap_or(20),
+            max_tokens: crate::config::Config::load()
+                .map(|c| c.max_tokens)
+                .unwrap_or(2048),
         }
     }
 }
@@ -137,6 +148,9 @@ impl GeminiTranslator {
             timeout_seconds: crate::config::Config::load()
                 .map(|c| c.timeout_seconds)
                 .unwrap_or(20),
+            max_tokens: crate::config::Config::load()
+                .map(|c| c.max_tokens)
+                .unwrap_or(2048),
         }
     }
 }
@@ -152,6 +166,9 @@ impl GrokTranslator {
             timeout_seconds: crate::config::Config::load()
                 .map(|c| c.timeout_seconds)
                 .unwrap_or(20),
+            max_tokens: crate::config::Config::load()
+                .map(|c| c.max_tokens)
+                .unwrap_or(2048),
         }
     }
 }
@@ -167,6 +184,9 @@ impl QwenTranslator {
             timeout_seconds: crate::config::Config::load()
                 .map(|c| c.timeout_seconds)
                 .unwrap_or(20),
+            max_tokens: crate::config::Config::load()
+                .map(|c| c.max_tokens)
+                .unwrap_or(2048),
         }
     }
 }
@@ -320,7 +340,8 @@ impl AiService for OpenAITranslator {
         debug!("发送给 OpenAI 的消息:\n{}", serde_json::to_string_pretty(&messages)?);
         let body = serde_json::json!({
             "model": self.model,
-            "messages": messages
+            "messages": messages,
+            "max_tokens": self.max_tokens
         });
 
         let ai_host = match url.split('/').nth(2) {
@@ -394,7 +415,8 @@ impl AiService for ClaudeTranslator {
         debug!("发送给 Claude 的消息:\n{}", serde_json::to_string_pretty(&messages)?);
         let body = serde_json::json!({
             "model": self.model,
-            "messages": messages
+            "messages": messages,
+            "max_tokens": self.max_tokens
         });
 
         let ai_host = match url.split('/').nth(2) {
@@ -490,7 +512,8 @@ impl AiService for GeminiTranslator {
                 "parts": [{
                     "text": prompt
                 }]
-            }]
+            }],
+            "max_tokens": self.max_tokens
         });
 
         let ai_host = match url.split('/').nth(2) {
@@ -563,7 +586,8 @@ impl AiService for GrokTranslator {
         debug!("发送给 Grok 的消息:\n{}", serde_json::to_string_pretty(&messages)?);
         let body = serde_json::json!({
             "model": self.model,
-            "messages": messages
+            "messages": messages,
+            "max_tokens": self.max_tokens
         });
 
         let ai_host = match url.split('/').nth(2) {
@@ -638,13 +662,8 @@ impl AiService for QwenTranslator {
         let body = serde_json::json!({
             "model": self.model,
             "messages": messages,
-            // temperature 控制输出的随机性，范围 0-1
-            // 设置为 0.1 使输出更加确定和集中，减少不必要的发散
             "temperature": 0.1,
-            // max_tokens 限制生成文本的最大长度
-            // 对于提交信息翻译来说，256 tokens 足够用了
-            // 限制长度可以显著提升响应速度
-            "max_tokens": 256
+            "max_tokens": self.max_tokens
         });
 
         let ai_host = match url.split('/').nth(2) {
