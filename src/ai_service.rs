@@ -513,7 +513,9 @@ impl AiService for GeminiTranslator {
                     "text": prompt
                 }]
             }],
-            "max_tokens": self.max_tokens
+            "generationConfig": {
+                "maxOutputTokens": self.max_tokens
+            }
         });
 
         let ai_host = match url.split('/').nth(2) {
