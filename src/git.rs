@@ -115,7 +115,7 @@ pub fn get_last_commit_diff() -> anyhow::Result<String> {
         .output()?;
 
     if !output.status.success() {
-        return Err(anyhow::anyhow!("执行 git diff HEAD~1..HEAD 命令失败，可能没有足够的提交历史"));
+        return Err(anyhow::anyhow!("执行 git diff HEAD~1..HEAD --no-prefix 命令失败，可能没有足够的提交历史"));
     }
 
     Ok(String::from_utf8(output.stdout)?)
