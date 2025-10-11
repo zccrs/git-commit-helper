@@ -249,7 +249,7 @@ jobs:
         cat PKGBUILD
         echo "========================================"
     - name: Publish AUR package (backup method)
-      uses: KSXGitHub/github-actions-deploy-aur@v2.7.2
+      uses: KSXGitHub/github-actions-deploy-aur@v4.1.1
       with:
         pkgname: git-commit-helper
         pkgbuild: ./PKGBUILD
