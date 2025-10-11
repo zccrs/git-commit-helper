@@ -38,6 +38,21 @@ cargo test --lib     # Library tests only
 git-commit-helper install  # Install git hooks in current repo
 ```
 
+## Important Notes
+
+### Always Read README.md
+Before making any changes or contributions, **always read the README.md file** for the latest information on:
+- Installation instructions
+- Usage examples
+- Configuration options
+- Packaging requirements
+- Release procedures
+
+The README.md contains critical information that may not be reflected in these guidelines.
+
+### RPM Packaging Requirements
+When updating version numbers for releases, **always update both the Version field AND the %changelog section** in `git-commit-helper.spec`. The changelog must follow RPM format with proper date, author, and version-release format.
+
 ## Code Patterns
 
 ### AI Service Implementation

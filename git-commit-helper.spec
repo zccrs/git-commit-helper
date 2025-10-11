@@ -1,5 +1,5 @@
 Name:           git-commit-helper
-Version:        0.7.0
+Version:        0.8.0
 Release:        1%{?dist}
 Summary:        帮助规范 git commit message 的工具
 
@@ -31,6 +31,9 @@ install -Dm644 completions/git-commit-helper.zsh %{buildroot}%{_datadir}/zsh/sit
 %{_datadir}/zsh/site-functions/_git-commit-helper
 
 %changelog
+* 五 10月 11 2025 zccrs <zhangjide@deepin.org> - 0.8.0-1
+- Version bump to 0.8.0
+
 * 二 7月 29 2025 zccrs <zccrs@live.com> - 0.7.0-1
 - feat: add --no-log parameter and rename --no-test-suggestions to --no-influence
 - fix: support multiple arguments for --issues parameter

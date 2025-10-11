@@ -1,3 +1,9 @@
+git-commit-helper (0.8.0) unstable; urgency=medium
+
+  * Version bump to 0.8.0
+
+ -- zccrs <zhangjide@deepin.org>  五, 11 10月 2025 00:00:00 +0800
+
 git-commit-helper (0.7.0) unstable; urgency=medium
 
   * feat: add --no-log parameter and rename --no-test-suggestions to --no-influence
