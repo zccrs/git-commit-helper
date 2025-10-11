@@ -686,6 +686,7 @@ pub async fn generate_commit_message(
     commit_type: Option<String>,
     message: Option<String>,
     auto_add: bool,
+    amend: bool,
     no_review: bool,
     no_translate: bool,
     mut only_chinese: bool,
@@ -726,15 +727,26 @@ pub async fn generate_commit_message(
         std::env::set_var("GIT_COMMIT_HELPER_NO_TRANSLATE", "1");
     }
 
-    let diff = get_staged_diff()?;
+    // 根据是否是 amend 模式选择不同的 diff
+    let diff = if amend {
+        println!("正在分析上一次提交的更改内容...");
+        git::get_last_commit_diff()?
+    } else {
+        get_staged_diff()?
+    };
+
     if diff.is_empty() {
-        return Err(anyhow::anyhow!("没有已暂存的改动，请先使用 git add 添加改动"));
+        if amend {
+            return Err(anyhow::anyhow!("无法获取上一次提交的差异内容，可能没有足够的提交历史"));
+        } else {
+            return Err(anyhow::anyhow!("没有已暂存的改动，请先使用 git add 添加改动"));
+        }
     }
 
     let config = config::Config::load()?;
 
-    // 在确认有暂存的改动后执行代码审查
-    if !no_review && config.ai_review {
+    // 在确认有差异内容后执行代码审查（对于 amend 模式，我们跳过审查，因为是对已有提交的修改）
+    if !amend && !no_review && config.ai_review {
         info!("正在进行代码审查...");
         if let Some(review) = review::review_changes(&config, no_review).await? {
             println!("\n{}\n", review);
@@ -756,7 +768,19 @@ pub async fn generate_commit_message(
     let service = config.get_default_service()?;
     let translator = ai_service::create_translator_for_service(service).await?;
 
-    println!("\n正在生成提交信息建议...");
+    if amend {
+        println!("\n正在基于上一次提交的更改生成新的提交信息...");
+        // 显示原提交信息供参考
+        if let Ok(original_msg) = git::get_last_commit_message() {
+            println!("原提交信息:");
+            println!("----------------------------------------");
+            println!("{}", original_msg.trim());
+            println!("----------------------------------------\n");
+        }
+    } else {
+        println!("\n正在生成提交信息建议...");
+    }
+
     let mut message = translator.chat(&prompt, &diff).await?
         .trim_start_matches("[NO_TRANSLATE]")
         .trim_start_matches("、、、plaintext")
@@ -795,38 +819,62 @@ pub async fn generate_commit_message(
     }
 
     // 预览生成的提交信息
-    println!("\n生成的提交信息预览:");
+    if amend {
+        println!("\n生成的修改后提交信息预览:");
+    } else {
+        println!("\n生成的提交信息预览:");
+    }
     println!("----------------------------------------");
     println!("{}", content);
     println!("----------------------------------------");
 
-    // 移除翻译相关的询问，直接询问用户是否确认提交
+    // 询问用户是否确认提交
+    let prompt_text = if amend {
+        "是否使用此提交信息修改上一次提交？"
+    } else {
+        "是否使用此提交信息？"
+    };
+
     if !Confirm::with_theme(&dialoguer::theme::ColorfulTheme::default())
-        .with_prompt("是否使用此提交信息？")
+        .with_prompt(prompt_text)
         .default(true)
         .interact()?
     {
-        println!("已取消提交");
+        if amend {
+            println!("已取消修改上一次提交");
+        } else {
+            println!("已取消提交");
+        }
         return Ok(());
     }
 
     // 执行git commit
-    let status = Command::new("git")
-        .current_dir(std::env::current_dir()?)
-        .arg("commit")
-        .arg("-m")
-        .arg(content)
-        .status()?;
+    let mut cmd = Command::new("git");
+    cmd.current_dir(std::env::current_dir()?);
+    cmd.arg("commit");
+    
+    if amend {
+        cmd.arg("--amend");
+    }
+    
+    cmd.arg("-m").arg(content);
+    
+    let status = cmd.status()?;
 
     // 清理环境变量（无论命令是否执行成功）
     std::env::remove_var("GIT_COMMIT_HELPER_SKIP_REVIEW");
     std::env::remove_var("GIT_COMMIT_HELPER_NO_TRANSLATE");
 
     if !status.success() {
-        return Err(anyhow::anyhow!("git commit 命令执行失败"));
+        let action = if amend { "修改提交" } else { "提交" };
+        return Err(anyhow::anyhow!("git commit 命令执行失败，{} 失败", action));
     }
 
-    println!("提交成功！");
+    if amend {
+        println!("修改提交成功！");
+    } else {
+        println!("提交成功！");
+    }
     Ok(())
 }
 

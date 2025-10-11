@@ -102,6 +102,36 @@ fn contains_chinese(text: &str) -> bool {
     text.chars().any(|c| c as u32 >= 0x4E00 && c as u32 <= 0x9FFF)
 }
 
-pub fn wrap_text(text: &str, max_length: usize) -> String {
-    fill(text, max_length)
+pub fn wrap_text(text: &str, width: usize) -> String {
+    fill(text, width)
+}
+
+/// 获取上一次提交的差异内容，用于 amend 模式
+pub fn get_last_commit_diff() -> anyhow::Result<String> {
+    use std::process::Command;
+    
+    let output = Command::new("git")
+        .args(["diff", "HEAD~1..HEAD", "--no-prefix"])
+        .output()?;
+
+    if !output.status.success() {
+        return Err(anyhow::anyhow!("执行 git diff HEAD~1..HEAD --no-prefix 命令失败，可能没有足够的提交历史"));
+    }
+
+    Ok(String::from_utf8(output.stdout)?)
+}
+
+/// 获取上一次提交的信息
+pub fn get_last_commit_message() -> anyhow::Result<String> {
+    use std::process::Command;
+    
+    let output = Command::new("git")
+        .args(["log", "-1", "--pretty=format:%s%n%n%b"])
+        .output()?;
+
+    if !output.status.success() {
+        return Err(anyhow::anyhow!("执行 git log 命令失败"));
+    }
+
+    Ok(String::from_utf8(output.stdout)?)
 }
