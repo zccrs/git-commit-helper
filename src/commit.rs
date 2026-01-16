@@ -3,6 +3,35 @@ use crate::ai_service;
 use crate::config;
 use crate::git;
 
+/// 从提交消息中提取 Change-Id
+fn extract_change_id(message: &str) -> Option<String> {
+    let change_id_regex = Regex::new(r"(?m)^Change-Id:\s*(.+)$").ok()?;
+    change_id_regex.captures(message)
+        .and_then(|cap| cap.get(1))
+        .map(|m| m.as_str().trim().to_string())
+}
+
+/// 将 Change-Id 添加到提交消息中（如果还没有的话）
+fn append_change_id(message: &str, change_id: &str) -> String {
+    // 检查消息中是否已经有 Change-Id
+    if message.contains("Change-Id:") {
+        return message.to_string();
+    }
+    
+    let mut result = message.to_string();
+    
+    // 确保消息末尾有换行
+    if !result.ends_with('\n') {
+        result.push('\n');
+    }
+    
+    // 添加 Change-Id（如果有其他标记，Change-Id 应该在最后）
+    result.push('\n');
+    result.push_str(&format!("Change-Id: {}", change_id));
+    
+    result
+}
+
 // 语言模式枚举
 #[derive(Debug, Clone, Copy)]
 enum LanguageMode {
@@ -562,8 +591,20 @@ impl LanguageMode {
 }
 
 // 统一的提示词构建函数
-fn build_prompt(mode: LanguageMode, user_message: Option<&str>, include_test_suggestions: bool, include_log: bool) -> String {
+fn build_prompt(mode: LanguageMode, user_message: Option<&str>, include_test_suggestions: bool, include_log: bool, original_message: Option<&str>) -> String {
     let mut prompt = String::from(mode.template(include_test_suggestions, include_log));
+
+    // 如果有原始提交信息（amend 模式），先添加它作为参考
+    if let Some(orig_msg) = original_message {
+        match mode {
+            LanguageMode::ChineseOnly => {
+                prompt.push_str(&format!("\n\n原始提交信息（请参考但不要完全照搬）：\n{}\n", orig_msg));
+            }
+            _ => {
+                prompt.push_str(&format!("\n\nOriginal commit message (for reference, but create improved version):\n{}\n", orig_msg));
+            }
+        }
+    }
 
     if let Some(msg) = user_message {
         match mode {
@@ -760,7 +801,27 @@ pub async fn generate_commit_message(
     let language_mode = LanguageMode::determine(only_chinese, only_english);
     let include_test_suggestions = !no_influence;
     let include_log = !no_log;
-    let prompt = build_prompt(language_mode, message.as_deref(), include_test_suggestions, include_log);
+    
+    // 在 amend 模式下获取原始提交消息作为参考
+    let (original_message, original_change_id) = if amend {
+        match git::get_last_commit_message() {
+            Ok(msg) => {
+                let change_id = extract_change_id(&msg);
+                (Some(msg), change_id)
+            }
+            Err(_) => (None, None)
+        }
+    } else {
+        (None, None)
+    };
+    
+    let prompt = build_prompt(
+        language_mode, 
+        message.as_deref(), 
+        include_test_suggestions, 
+        include_log,
+        original_message.as_deref()
+    );
 
     debug!("生成的提示信息：\n{}", prompt);
 
@@ -771,7 +832,7 @@ pub async fn generate_commit_message(
     if amend {
         println!("\n正在基于上一次提交的更改生成新的提交信息...");
         // 显示原提交信息供参考
-        if let Ok(original_msg) = git::get_last_commit_message() {
+        if let Some(ref original_msg) = original_message {
             println!("原提交信息:");
             println!("----------------------------------------");
             println!("{}", original_msg.trim());
@@ -815,6 +876,13 @@ pub async fn generate_commit_message(
             Err(e) => {
                 eprintln!("警告: 解析 issues 参数失败: {}", e);
             }
+        }
+    }
+    
+    // 在 amend 模式下，如果原提交有 Change-Id，保留它
+    if amend {
+        if let Some(change_id) = original_change_id {
+            content = append_change_id(&content, &change_id);
         }
     }
 
@@ -1042,5 +1110,48 @@ mod tests {
     // 辅助测试函数
     fn parse_pms_link_multiple(issues: &str) -> anyhow::Result<String> {
         parse_issue_reference(issues)
+    }
+
+    #[test]
+    fn test_extract_change_id() {
+        let message = "feat: add new feature\n\nThis is a commit message\n\nChange-Id: I1234567890abcdef1234567890abcdef12345678\n";
+        let change_id = extract_change_id(message);
+        assert_eq!(change_id, Some("I1234567890abcdef1234567890abcdef12345678".to_string()));
+    }
+
+    #[test]
+    fn test_extract_change_id_not_found() {
+        let message = "feat: add new feature\n\nThis is a commit message without change id\n";
+        let change_id = extract_change_id(message);
+        assert_eq!(change_id, None);
+    }
+
+    #[test]
+    fn test_append_change_id() {
+        let message = "feat: add new feature\n\nThis is a commit message\n";
+        let change_id = "I1234567890abcdef1234567890abcdef12345678";
+        let result = append_change_id(message, change_id);
+        assert!(result.contains("Change-Id: I1234567890abcdef1234567890abcdef12345678"));
+    }
+
+    #[test]
+    fn test_append_change_id_already_exists() {
+        let message = "feat: add new feature\n\nThis is a commit message\n\nChange-Id: I1234567890abcdef1234567890abcdef12345678\n";
+        let change_id = "I1234567890abcdef1234567890abcdef12345678";
+        let result = append_change_id(message, change_id);
+        // 应该返回原消息，不重复添加
+        assert_eq!(result, message);
+    }
+
+    #[test]
+    fn test_append_change_id_with_other_marks() {
+        let message = "feat: add new feature\n\nThis is a commit message\n\nFixes: #123\nPMS: BUG-456\n";
+        let change_id = "I1234567890abcdef1234567890abcdef12345678";
+        let result = append_change_id(message, change_id);
+        assert!(result.contains("Fixes: #123"));
+        assert!(result.contains("PMS: BUG-456"));
+        assert!(result.contains("Change-Id: I1234567890abcdef1234567890abcdef12345678"));
+        // Change-Id 应该在最后
+        assert!(result.ends_with("Change-Id: I1234567890abcdef1234567890abcdef12345678"));
     }
 }
