@@ -53,6 +53,12 @@
 
 ## 📦 安装
 
+### 使用 Cargo 安装（推荐）
+
+```bash
+cargo install git-commit-helper-cli
+```
+
 ### 从源码安装
 
 ```bash
@@ -60,7 +66,7 @@
 git clone https://github.com/zccrs/git-commit-helper
 cd git-commit-helper
 
-# 快速安装（推荐）
+# 快速安装
 ./install.sh
 ```
 
