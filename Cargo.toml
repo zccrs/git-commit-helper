@@ -1,7 +1,9 @@
 [package]
-name = "git-commit-helper"
+name = "git-commit-helper-cli"
 version = "0.8.0"
 edition = "2021"
+description = "A CLI tool to help generate standardized git commit messages"
+license = "MIT"
 
 [dependencies]
 serde = { version = "1.0", features = ["derive"] }
