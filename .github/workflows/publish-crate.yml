@@ -27,12 +27,7 @@ jobs:
         run: |
           tag="${GITHUB_REF#refs/tags/}"
           version=$(cargo metadata --no-deps --format-version 1 |
-            python3 - <<'PY'
-            import json,sys
-            meta=json.load(sys.stdin)
-            print(meta['packages'][0]['version'])
-            PY
-          )
+            python3 -c "import sys,json; print(json.load(sys.stdin)['packages'][0]['version'])")
           if [ "${tag}" != "v${version}" ]; then
             echo "Tag ${tag} does not match crate version v${version}" >&2
             exit 1
