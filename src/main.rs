@@ -42,6 +42,9 @@ enum Commands {
         /// 设置默认是否只使用英文提交信息，true: 仅英文，false: 中英双语
         #[arg(long = "set-only-english", help = "设置是否默认只使用英文提交信息，true: 仅英文，false: 中英双语")]
         only_english: Option<bool>,
+        /// 设置默认翻译方向：to-english（中译英，默认）或 to-chinese（英译中）
+        #[arg(long = "set-translate-direction", help = "设置默认翻译方向：to-english（中译英）或 to-chinese（英译中）")]
+        translate_direction: Option<String>,
     },
     /// 显示当前配置信息
     Show,
@@ -60,7 +63,7 @@ enum Commands {
         #[command(subcommand)]
         command: ServiceCommands,
     },
-    /// 翻译中文内容为英文
+    /// 翻译内容
     Translate {
         /// 要翻译的文件路径
         #[arg(short, long)]
@@ -70,6 +73,12 @@ enum Commands {
         text: Option<String>,
         /// 要翻译的内容
         content: Option<String>,
+        /// 翻译为中文（英译中）
+        #[arg(long = "to-chinese", conflicts_with = "to_english")]
+        to_chinese: bool,
+        /// 翻译为英文（中译英，默认）
+        #[arg(long = "to-english", conflicts_with = "to_chinese")]
+        to_english: bool,
     },
     /// 生成提交信息
     #[command(name = "commit")]
@@ -205,14 +214,16 @@ async fn main() -> Result<()> {
     };
 
     match cli.command {
-        Some(Commands::Config { only_chinese, only_english }) => {
+        Some(Commands::Config { only_chinese, only_english, translate_direction }) => {
+            let mut config = config::Config::load().unwrap_or_else(|_| config::Config::new());
+            let mut config_changed = false;
+
             if let Some(only_chinese) = only_chinese {
-                let mut config = config::Config::load().unwrap_or_else(|_| config::Config::new());
                 config.only_chinese = only_chinese;
                 if only_chinese {
                     config.only_english = false; // 如果设置为仅中文，则清除仅英文标志
                 }
-                config.save()?;
+                config_changed = true;
                 let language_mode = if config.only_chinese {
                     "仅中文"
                 } else if config.only_english {
@@ -221,14 +232,14 @@ async fn main() -> Result<()> {
                     "中英双语"
                 };
                 println!("{}", Style::green(&format!("已将默认提交信息语言设置为: {}", language_mode)));
-                Ok(())
-            } else if let Some(only_english) = only_english {
-                let mut config = config::Config::load().unwrap_or_else(|_| config::Config::new());
+            }
+
+            if let Some(only_english) = only_english {
                 config.only_english = only_english;
                 if only_english {
                     config.only_chinese = false; // 如果设置为仅英文，则清除仅中文标志
                 }
-                config.save()?;
+                config_changed = true;
                 let language_mode = if config.only_chinese {
                     "仅中文"
                 } else if config.only_english {
@@ -237,6 +248,27 @@ async fn main() -> Result<()> {
                     "中英双语"
                 };
                 println!("{}", Style::green(&format!("已将默认提交信息语言设置为: {}", language_mode)));
+            }
+
+            if let Some(direction_str) = translate_direction {
+                let direction = match direction_str.as_str() {
+                    "to-english" | "chinese-to-english" | "中译英" => config::TranslateDirection::ChineseToEnglish,
+                    "to-chinese" | "english-to-chinese" | "英译中" => config::TranslateDirection::EnglishToChinese,
+                    _ => {
+                        return Err(anyhow::anyhow!("无效的翻译方向，请使用 'to-english'（中译英）或 'to-chinese'（英译中）"));
+                    }
+                };
+                config.translate_direction = direction.clone();
+                config_changed = true;
+                let direction_name = match direction {
+                    config::TranslateDirection::ChineseToEnglish => "中译英",
+                    config::TranslateDirection::EnglishToChinese => "英译中",
+                };
+                println!("{}", Style::green(&format!("已将默认翻译方向设置为: {}", direction_name)));
+            }
+
+            if config_changed {
+                config.save()?;
                 Ok(())
             } else {
                 config::Config::interactive_config().await?;
@@ -351,7 +383,7 @@ async fn main() -> Result<()> {
                     let translator = ai_service::create_translator_for_service(service).await?;
                     let test_text = text.unwrap_or_else(|| "这是一个测试消息，用于验证翻译功能是否正常。".to_string());
                     debug!("开始发送翻译请求");
-                    match translator.translate(&test_text).await {
+                    match translator.translate(&test_text, &config::TranslateDirection::ChineseToEnglish).await {
                         Ok(result) => {
                             debug!("收到翻译响应");
                             println!("{}", Style::separator());
@@ -379,7 +411,7 @@ async fn main() -> Result<()> {
                 }
             }
         }
-        Some(Commands::Translate { file, text, content }) => {
+        Some(Commands::Translate { file, text, content, to_chinese, to_english }) => {
             let config = config::Config::load()?;
             if config.services.is_empty() {
                 return Err(anyhow::anyhow!("没有配置任何 AI 服务，请先添加服务"));
@@ -401,11 +433,26 @@ async fn main() -> Result<()> {
                 return Err(anyhow::anyhow!("请提供要翻译的内容"));
             };
 
+            // 确定翻译方向
+            let direction = if to_chinese {
+                config::TranslateDirection::EnglishToChinese
+            } else if to_english {
+                config::TranslateDirection::ChineseToEnglish
+            } else {
+                // 使用配置文件中的默认方向
+                config.translate_direction.clone()
+            };
+
+            let direction_str = match direction {
+                config::TranslateDirection::ChineseToEnglish => "中译英",
+                config::TranslateDirection::EnglishToChinese => "英译中",
+            };
+
             let service = config.get_default_service()?;
-            println!("{}", Style::title(&format!("正在使用 {:?} 服务进行翻译...", service.service)));
+            println!("{}", Style::title(&format!("正在使用 {:?} 服务进行翻译（{}）...", service.service, direction_str)));
 
             let translator = ai_service::create_translator_for_service(service).await?;
-            match translator.translate(&content).await {
+            match translator.translate(&content, &direction).await {
                 Ok(result) => {
                     println!("{}", Style::separator());
                     println!("{}", Style::title("翻译结果:"));

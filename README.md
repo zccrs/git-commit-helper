@@ -38,8 +38,10 @@
   - 自动审查代码变更
   - 性能和安全建议
   - 可通过参数禁用
-- 🌏 中英双语
-  - 自动检测中文内容
+- 🌏 双向翻译
+  - 支持中文翻译为英文（默认）
+  - 支持英文翻译为中文
+  - 可配置默认翻译方向
   - 智能中英互译
   - 保持格式规范
 - 📋 测试建议
@@ -173,6 +175,10 @@ a line exceeds the recommended value of git.
 
 ### 翻译命令
 
+翻译命令支持双向翻译，可以进行中译英或英译中。
+
+#### 基本用法
+
 使用翻译命令有三种方式：
 ```bash
 # 方式1：指定文件路径
@@ -188,11 +194,32 @@ git-commit-helper translate /path/to/existing/file    # 文件路径
 
 命令会自动判断参数内容：如果是一个存在的文件路径则读取文件内容进行翻译，否则将参数内容作为文本进行翻译。
 
+#### 翻译方向控制
+
+默认情况下，翻译命令使用配置文件中设置的默认翻译方向（默认为中译英）。你可以通过以下方式控制翻译方向：
+
+```bash
+# 中译英（使用默认方向或显式指定）
+git-commit-helper translate "这是中文内容"
+git-commit-helper translate --to-english "这是中文内容"
+
+# 英译中
+git-commit-helper translate --to-chinese "This is English content"
+
+# 设置默认翻译方向
+git-commit-helper config --set-translate-direction to-english  # 默认中译英
+git-commit-helper config --set-translate-direction to-chinese  # 默认英译中
+```
+
+支持的翻译方向值：
+- `to-english` 或 `chinese-to-english` 或 `中译英`：中文翻译为英文
+- `to-chinese` 或 `english-to-chinese` 或 `英译中`：英文翻译为中文
+
 ### 命令概览
 
 | 命令 | 说明 | 示例 |
 |------|------|------|
-| config | 配置 AI 服务 | `git-commit-helper config [--set-only-chinese <true\|false>/--set-only-english <true\|false>]` |
+| config | 配置 AI 服务 | `git-commit-helper config [--set-only-chinese <true\|false>/--set-only-english <true\|false>/--set-translate-direction <to-english\|to-chinese>]` |
 | show | 显示当前配置 | `git-commit-helper show` |
 | install | 安装 Git Hook | `git-commit-helper install [-f]` |
 | ai add | 添加 AI 服务 | `git-commit-helper ai add` |
@@ -202,7 +229,7 @@ git-commit-helper translate /path/to/existing/file    # 文件路径
 | ai set-timeout | 设置请求超时 | `git-commit-helper ai set-timeout -s 30` |
 | ai list | 列出所有服务 | `git-commit-helper ai list` |
 | ai test | 测试指定服务 | `git-commit-helper ai test [-t "测试文本"]` |
-| translate | 翻译内容 | `git-commit-helper translate [-f 文件] [-t 文本]` |
+| translate | 翻译内容 | `git-commit-helper translate [-f 文件] [-t 文本] [--to-english\|--to-chinese]` |
 | commit | 生成提交信息 | `git-commit-helper commit [-t 类型] [-m 描述] [-a] [--amend] [--no-review/--no-influence/--no-log/--only-chinese/--only-english] [--issues ISSUE...]` |
 | ai-review | 管理 AI 代码审查 | `git-commit-helper ai-review [--enable/--disable/--status]` |
 
@@ -223,7 +250,18 @@ git-commit-helper translate /path/to/existing/file    # 文件路径
 ```bash
 # 配置
 git-commit-helper config [选项]
-    --set-only-chinese <true|false>  设置默认是否只使用中文提交信息
+    --set-only-chinese <true|false>        设置默认是否只使用中文提交信息
+    --set-only-english <true|false>        设置默认是否只使用英文提交信息
+    --set-translate-direction <DIRECTION>  设置默认翻译方向
+                                           可选值: to-english（中译英）, to-chinese（英译中）
+
+# 翻译内容
+git-commit-helper translate [选项] [内容]
+    -f, --file <FILE>     指定要翻译的文件路径
+    -t, --text <TEXT>     指定要翻译的文本内容
+    --to-english         翻译为英文（中译英）
+    --to-chinese         翻译为中文（英译中）
+    [内容]               直接提供要翻译的文本或文件路径（智能判断）
 
 # 远程代码审查
 git-commit-helper <URL>
@@ -258,6 +296,22 @@ git-commit-helper commit [选项]
 示例：
 
 ```bash
+# 翻译示例
+# 使用默认翻译方向（默认为中译英）
+git-commit-helper translate "这是一段中文内容"
+
+# 显式指定中译英
+git-commit-helper translate --to-english "这是一段中文内容"
+
+# 英译中
+git-commit-helper translate --to-chinese "This is English content"
+
+# 设置默认翻译方向为中译英
+git-commit-helper config --set-translate-direction to-english
+
+# 设置默认翻译方向为英译中
+git-commit-helper config --set-translate-direction to-chinese
+
 # 生成提交信息
 git-commit-helper commit
 

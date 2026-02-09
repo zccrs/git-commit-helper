@@ -13,9 +13,9 @@ use copilot_client::CopilotClient;
 
 #[async_trait]
 pub trait AiService: Send + Sync {
-    async fn translate(&self, text: &str) -> anyhow::Result<String> {
+    async fn translate(&self, text: &str, direction: &crate::config::TranslateDirection) -> anyhow::Result<String> {
         // 使用翻译的 prompt
-        let system_prompt = get_translation_prompt(text);
+        let system_prompt = get_translation_prompt(text, direction);
         Ok(self.chat(&system_prompt, text).await?)
     }
 
@@ -218,9 +218,12 @@ fn wrap_chinese_text(text: &str, max_width: usize) -> String {
     result
 }
 
-fn get_translation_prompt(text: &str) -> String {
-    let prompt = format!(
-    r#"You are a professional translator. Please translate the following Chinese text to English.
+fn get_translation_prompt(text: &str, direction: &crate::config::TranslateDirection) -> String {
+    use crate::config::TranslateDirection;
+    
+    let prompt = match direction {
+        TranslateDirection::ChineseToEnglish => format!(
+            r#"You are a professional translator. Please translate the following Chinese text to English.
     Important rules:
     1. Keep all English content, numbers, and English punctuation unchanged
     2. Do not translate any content inside English double quotes
@@ -237,7 +240,30 @@ fn get_translation_prompt(text: &str) -> String {
 
     Text to translate:
     {}"#,
-    wrap_chinese_text(text, 72));
+            wrap_chinese_text(text, 72)
+        ),
+        TranslateDirection::EnglishToChinese => format!(
+            r#"You are a professional translator. Please translate the following English text to Chinese.
+    Important rules:
+    1. Keep all Chinese content, numbers, and Chinese punctuation unchanged
+    2. Do not translate any content inside quotes
+    3. Maintain the original text structure and formatting
+    4. Only return the Chinese translation, DO NOT include the original English text
+    5. Keep simple and concise, no need to rewrite or expand the content
+    6. Use appropriate Chinese punctuation marks
+
+    Example response format:
+    feat: 添加外部插件支持
+
+    1. 实现插件加载机制
+    2. 添加插件配置接口
+    3. 设置插件发现路径: "/plugins"
+
+    Text to translate:
+    {}"#,
+            text
+        ),
+    };
 
     debug!("生成的提示词:\n{}", prompt);
     prompt
@@ -725,7 +751,7 @@ pub async fn create_translator(config: &Config) -> anyhow::Result<Box<dyn Transl
     create_translator_for_service(service_config).await
 }
 
-pub async fn translate_with_fallback(config: &Config, text: &str) -> anyhow::Result<String> {
+pub async fn translate_with_fallback(config: &Config, text: &str, direction: &crate::config::TranslateDirection) -> anyhow::Result<String> {
     let mut tried_services = Vec::new();
 
     // 如果已设置环境变量，直接返回原文
@@ -734,7 +760,7 @@ pub async fn translate_with_fallback(config: &Config, text: &str) -> anyhow::Res
     }
 
     debug!("尝试使用默认服务 {:?}", config.default_service);
-    if let Some(result) = try_translate(&config.default_service, config, text).await {
+    if let Some(result) = try_translate(&config.default_service, config, text, direction).await {
         return result;
     }
     tried_services.push(config.default_service.clone());
@@ -745,7 +771,7 @@ pub async fn translate_with_fallback(config: &Config, text: &str) -> anyhow::Res
         }
 
         debug!("尝试使用备选服务 {:?}", service_config.service);
-        if let Some(result) = try_translate(&service_config.service, config, text).await {
+        if let Some(result) = try_translate(&service_config.service, config, text, direction).await {
             return result;
         }
         tried_services.push(service_config.service.clone());
@@ -753,7 +779,7 @@ pub async fn translate_with_fallback(config: &Config, text: &str) -> anyhow::Res
 
     while let Some(service) = select_retry_service(config, &tried_services)? {
         debug!("用户选择使用 {:?} 重试", service);
-        if let Some(result) = try_translate(&service, config, text).await {
+        if let Some(result) = try_translate(&service, config, text, direction).await {
             return result;
         }
         tried_services.push(service);
@@ -762,12 +788,12 @@ pub async fn translate_with_fallback(config: &Config, text: &str) -> anyhow::Res
     Err(anyhow::anyhow!("所有AI服务均失败"))
 }
 
-async fn try_translate(service: &AIService, config: &Config, text: &str) -> Option<anyhow::Result<String>> {
+async fn try_translate(service: &AIService, config: &Config, text: &str, direction: &crate::config::TranslateDirection) -> Option<anyhow::Result<String>> {
     let service_config = config.services.iter()
         .find(|s| s.service == *service)?;
 
     let translator = create_translator_for_service(service_config).await.ok()?;
-    match translator.translate(text).await {
+    match translator.translate(text, direction).await {
         Ok(result) => Some(Ok(result)),
         Err(e) => {
             warn!("{:?} 服务翻译失败: {}", service, e);
