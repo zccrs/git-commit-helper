@@ -959,7 +959,7 @@ pub async fn generate_commit_suggestion(commit_types: &[String], user_descriptio
         None => get_staged_diff()?
     };
 
-    let message = translator.translate(&prompt).await?.to_string();
+    let message = translator.translate(&prompt, &config::TranslateDirection::ChineseToEnglish).await?.to_string();
 
     // 移除各种 AI 返回的元信息标记
     let message = message

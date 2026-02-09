@@ -26,6 +26,8 @@ pub struct Config {
     pub only_chinese: bool,  // 是否默认只使用中文
     #[serde(default = "default_only_english")]
     pub only_english: bool,  // 是否默认只使用英文
+    #[serde(default = "default_translate_direction")]
+    pub translate_direction: TranslateDirection,  // 默认翻译方向
 }
 
 // 添加默认值函数
@@ -35,6 +37,16 @@ fn default_only_chinese() -> bool {
 
 fn default_only_english() -> bool {
     false
+}
+
+fn default_translate_direction() -> TranslateDirection {
+    TranslateDirection::ChineseToEnglish
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
+pub enum TranslateDirection {
+    ChineseToEnglish,  // 中译英（默认）
+    EnglishToChinese,  // 英译中
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone, Default)]
@@ -89,6 +101,7 @@ impl Config {
             gerrit: None,
             only_chinese: false,  // 默认关闭
             only_english: false,  // 默认关闭
+            translate_direction: default_translate_direction(),  // 默认中译英
         }
     }
 
@@ -293,6 +306,7 @@ impl Config {
             gerrit: None,
             only_chinese: false,  // 默认关闭
             only_english: false,  // 默认关闭
+            translate_direction: default_translate_direction(),  // 默认中译英
         };
 
         // 确保配置目录存在
@@ -322,9 +336,10 @@ impl Config {
                 gerrit: None,
                 only_chinese: false,
                 only_english: false,
+                translate_direction: default_translate_direction(),
             };
             let translator = ai_service::create_translator(&test_config).await?;
-            match translator.translate("这是一个测试消息，用于验证翻译功能是否正常。").await {
+            match translator.translate("这是一个测试消息，用于验证翻译功能是否正常。", &TranslateDirection::ChineseToEnglish).await {
                 Ok(result) => {
                     println!("\n测试结果:");
                     println!("原文: 这是一个测试消息，用于验证翻译功能是否正常。");
@@ -496,11 +511,12 @@ impl Config {
                 gerrit: None,
                 only_chinese: false,
                 only_english: false,
+                translate_direction: default_translate_direction(),
             };
             let translator = ai_service::create_translator(&test_config).await?;
             let text = "这是一个测试消息，用于验证翻译功能是否正常。";
             debug!("开始发送翻译请求");
-            match translator.translate(text).await {
+            match translator.translate(text, &TranslateDirection::ChineseToEnglish).await {
                 Ok(result) => {
                     debug!("收到翻译响应");
                     println!("\n测试结果:");
