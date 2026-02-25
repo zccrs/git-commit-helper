@@ -877,12 +877,13 @@ pub async fn generate_commit_message(
                 eprintln!("警告: 解析 issues 参数失败: {}", e);
             }
         }
-    } else if amend {
-        // 在 amend 模式下且未提供新的 issues 参数时，从原提交中保留所有标记字段
-        // （Change-Id 由 append_change_id 单独处理，此处跳过）
+    }
+
+    // 在 amend 模式下，保留原提交中所有未被新内容覆盖的标记字段
+    // （Change-Id 须保持在最后，由 append_change_id 单独处理）
+    if amend {
         if let Some(ref orig_msg) = original_message {
             let orig_commit = CommitMessage::parse(orig_msg);
-            // 只添加新内容中尚未包含的标记（排除 Change-Id，它由 append_change_id 处理）
             let marks_to_add: Vec<String> = orig_commit.marks.iter()
                 .filter(|mark| {
                     let mark_key = mark.split(':').next().unwrap_or("").trim().to_lowercase();
@@ -901,10 +902,6 @@ pub async fn generate_commit_message(
                 content.push_str(&marks_to_add.join("\n"));
             }
         }
-    }
-    
-    // 在 amend 模式下，如果原提交有 Change-Id，保留它
-    if amend {
         if let Some(change_id) = original_change_id {
             content = append_change_id(&content, &change_id);
         }
