@@ -1,3 +1,9 @@
+git-commit-helper (0.9.3) unstable; urgency=medium
+
+  * Release version 0.9.3
+
+ -- zccrs <zhangjide@deepin.org>  三, 25 2月 2026 08:19:32 +0800
+
 git-commit-helper (0.8.0) unstable; urgency=medium
 
   * Version bump to 0.8.0
