@@ -878,9 +878,30 @@ pub async fn generate_commit_message(
             }
         }
     }
-    
-    // 在 amend 模式下，如果原提交有 Change-Id，保留它
+
+    // 在 amend 模式下，保留原提交中所有未被新内容覆盖的标记字段
+    // （Change-Id 须保持在最后，由 append_change_id 单独处理）
     if amend {
+        if let Some(ref orig_msg) = original_message {
+            let orig_commit = CommitMessage::parse(orig_msg);
+            let marks_to_add: Vec<String> = orig_commit.marks.iter()
+                .filter(|mark| {
+                    let mark_key = mark.split(':').next().unwrap_or("").trim().to_lowercase();
+                    mark_key != "change-id" && !content.lines().any(|line| {
+                        line.trim().split(':').next()
+                            .map_or(false, |k| k.trim().to_lowercase() == mark_key)
+                    })
+                })
+                .cloned()
+                .collect();
+            if !marks_to_add.is_empty() {
+                if !content.ends_with('\n') {
+                    content.push('\n');
+                }
+                content.push('\n');
+                content.push_str(&marks_to_add.join("\n"));
+            }
+        }
         if let Some(change_id) = original_change_id {
             content = append_change_id(&content, &change_id);
         }
@@ -1153,5 +1174,73 @@ mod tests {
         assert!(result.contains("Change-Id: I1234567890abcdef1234567890abcdef12345678"));
         // Change-Id 应该在最后
         assert!(result.ends_with("Change-Id: I1234567890abcdef1234567890abcdef12345678"));
+    }
+
+    // 测试从原提交消息中提取所有需保留的标记（排除 Change-Id）
+    #[test]
+    fn test_extract_issue_marks_from_original_commit() {
+        let original = "fix: some bug\n\nDescription here\n\nFixes: #123\nPMS: BUG-456\nLog: Fix critical bug\nChange-Id: Iabc123\n";
+        let orig_commit = CommitMessage::parse(original);
+        let marks_to_preserve: Vec<String> = orig_commit.marks.iter()
+            .filter(|mark| {
+                let mark_key = mark.split(':').next().unwrap_or("").trim().to_lowercase();
+                mark_key != "change-id"
+            })
+            .cloned()
+            .collect();
+        assert_eq!(marks_to_preserve.len(), 3);
+        assert!(marks_to_preserve.contains(&"Fixes: #123".to_string()));
+        assert!(marks_to_preserve.contains(&"PMS: BUG-456".to_string()));
+        assert!(marks_to_preserve.contains(&"Log: Fix critical bug".to_string()));
+        // Change-Id 不应被保留（由 append_change_id 单独处理）
+        assert!(!marks_to_preserve.iter().any(|m| m.to_lowercase().starts_with("change-id:")));
+    }
+
+    // 测试 amend 时新内容已包含标记时不重复添加
+    #[test]
+    fn test_amend_no_duplicate_issue_marks() {
+        let original = "fix: some bug\n\nFixes: #123\nLog: Fix bug\n";
+        let orig_commit = CommitMessage::parse(original);
+
+        // 新内容已包含 Fixes: 和 Log:
+        let new_content = "fix: improved bug fix\n\nBetter description\n\nFixes: #123\nLog: Fix bug";
+        let marks_to_add: Vec<String> = orig_commit.marks.iter()
+            .filter(|mark| {
+                let mark_key = mark.split(':').next().unwrap_or("").trim().to_lowercase();
+                mark_key != "change-id" && !new_content.lines().any(|line| {
+                    line.trim().split(':').next()
+                        .map_or(false, |k| k.trim().to_lowercase() == mark_key)
+                })
+            })
+            .cloned()
+            .collect();
+        // 不应重复添加
+        assert!(marks_to_add.is_empty());
+    }
+
+    // 测试 amend 时新内容不含标记时正确添加所有标记
+    #[test]
+    fn test_amend_preserves_issue_marks_when_missing() {
+        let original = "fix: some bug\n\nFixes: #123\nPMS: BUG-456\nLog: Fix critical bug\nChange-Id: Iabc123\n";
+        let orig_commit = CommitMessage::parse(original);
+
+        // 新内容不含任何标记
+        let new_content = "fix: improved bug fix\n\nBetter description";
+        let marks_to_add: Vec<String> = orig_commit.marks.iter()
+            .filter(|mark| {
+                let mark_key = mark.split(':').next().unwrap_or("").trim().to_lowercase();
+                mark_key != "change-id" && !new_content.lines().any(|line| {
+                    line.trim().split(':').next()
+                        .map_or(false, |k| k.trim().to_lowercase() == mark_key)
+                })
+            })
+            .cloned()
+            .collect();
+        assert_eq!(marks_to_add.len(), 3);
+        assert!(marks_to_add.contains(&"Fixes: #123".to_string()));
+        assert!(marks_to_add.contains(&"PMS: BUG-456".to_string()));
+        assert!(marks_to_add.contains(&"Log: Fix critical bug".to_string()));
+        // Change-Id 不应被包含（由 append_change_id 处理）
+        assert!(!marks_to_add.iter().any(|m| m.to_lowercase().starts_with("change-id:")));
     }
 }
