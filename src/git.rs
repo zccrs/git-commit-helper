@@ -1,6 +1,7 @@
 use crate::commit::CommitMessage;
 use crate::ai_service;
 use crate::review;
+use crate::config::{self, TranslateDirection};
 use dialoguer::Confirm;
 use log::{debug, info};
 use std::path::Path;
@@ -57,14 +58,14 @@ pub async fn process_commit_msg(path: &Path, no_review: bool) -> anyhow::Result<
 
     info!("开始翻译流程，默认使用 {:?} 服务", config.default_service);
 
-    // 翻译标题
-    let en_title = ai_service::translate_with_fallback(&config, &msg.title).await?;
+    // 翻译标题（中译英）
+    let en_title = ai_service::translate_with_fallback(&config, &msg.title, &TranslateDirection::ChineseToEnglish).await?;
     let en_title = wrap_text(&en_title, MAX_LINE_LENGTH);
     let original_title = msg.title.clone();
 
     // 翻译正文（如果有的话）
     let (en_body, cn_body) = if let Some(body) = &msg.body {
-        let en_body = ai_service::translate_with_fallback(&config, body).await?;
+        let en_body = ai_service::translate_with_fallback(&config, body, &TranslateDirection::ChineseToEnglish).await?;
         (Some(wrap_text(&en_body, MAX_LINE_LENGTH)), Some(body.clone()))
     } else {
         (None, None)
