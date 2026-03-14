@@ -15,6 +15,7 @@ mod install;
 mod commit;
 mod review;
 mod ai_service;
+mod copyright_check;
 
 #[derive(Parser)]
 #[command(name = "git-commit-helper")]

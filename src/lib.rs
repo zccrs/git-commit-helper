@@ -2,6 +2,7 @@ pub mod ai_service;
 pub mod auth;
 pub mod commit;
 pub mod config;
+pub mod copyright_check;
 pub mod debug;
 pub mod git;
 pub mod github;

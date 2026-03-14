@@ -2,6 +2,8 @@ use regex::Regex;
 use crate::ai_service;
 use crate::config;
 use crate::git;
+use crate::review;
+use crate::copyright_check;
 
 /// 从提交消息中提取 Change-Id
 fn extract_change_id(message: &str) -> Option<String> {
@@ -718,9 +720,8 @@ impl CommitMessage {
     }
 }
 
-use crate::review;
 use dialoguer::Confirm;
-use log::{debug, info};
+use log::{debug, info, warn};
 use std::process::Command;
 
 pub async fn generate_commit_message(
@@ -785,6 +786,38 @@ pub async fn generate_commit_message(
     }
 
     let config = config::Config::load()?;
+
+    // 执行版权检查（对于 amend 模式，我们跳过检查）
+    if !amend {
+        info!("正在进行版权检查...");
+        
+        // 优先使用 AI 检查，如果失败则回退到硬编码检查
+        let check_result = match copyright_check::check_copyright_with_ai(&config).await {
+            Ok(result) => {
+                info!("AI 版权检查完成");
+                result
+            }
+            Err(e) => {
+                warn!("AI 版权检查失败，回退到硬编码检查: {}", e);
+                copyright_check::check_copyright()?
+            }
+        };
+        
+        let formatted = copyright_check::format_copyright_result(&check_result);
+        println!("\n{}\n", formatted);
+        
+        // 如果有版权问题，询问用户是否继续
+        if check_result.has_issues {
+            if !Confirm::with_theme(&dialoguer::theme::ColorfulTheme::default())
+                .with_prompt("发现版权问题，是否继续提交？")
+                .default(false)
+                .interact()?
+            {
+                println!("已取消提交");
+                return Ok(());
+            }
+        }
+    }
 
     // 在确认有差异内容后执行代码审查（对于 amend 模式，我们跳过审查，因为是对已有提交的修改）
     if !amend && !no_review && config.ai_review {
